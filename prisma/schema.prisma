@@ -22,6 +22,8 @@ model User {
   memberships       HouseholdMember[]
   paidExpenses      Expense[]         @relation("ExpensePayer")
   expenseSplits     ExpenseSplit[]
+  settlementsPaid     Settlement[] @relation("SettlementPayer")
+  settlementsReceived Settlement[] @relation("SettlementReceiver")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -83,6 +85,7 @@ model Household {
   invites   HouseholdInvite[]
   categories Category[]
   expenses   Expense[]
+  settlements Settlement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,4 +178,22 @@ model ExpenseSplit {
   @@index([expenseId])
   @@index([userId])
   @@map("expense_splits")
+}
+
+model Settlement {
+  id          String    @id @default(cuid())
+  householdId String
+  payerId     String
+  receiverId  String
+  amount      Float
+  date        DateTime  @default(now())
+  note        String?
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  payer       User      @relation("SettlementPayer", fields: [payerId], references: [id])
+  receiver    User      @relation("SettlementReceiver", fields: [receiverId], references: [id])
+
+  @@index([householdId])
+  @@index([payerId])
+  @@index([receiverId])
+  @@map("settlements")
 }
