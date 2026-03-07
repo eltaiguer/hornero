@@ -86,6 +86,7 @@ model Household {
   categories Category[]
   expenses   Expense[]
   settlements Settlement[]
+  budgets    Budget[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -134,6 +135,7 @@ model Category {
   isDefault   Boolean   @default(false)
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   expenses    Expense[]
+  budgets     Budget[]
 
   @@unique([householdId, name])
   @@index([householdId])
@@ -196,4 +198,19 @@ model Settlement {
   @@index([payerId])
   @@index([receiverId])
   @@map("settlements")
+}
+
+model Budget {
+  id          String    @id @default(cuid())
+  householdId String
+  categoryId  String
+  month       Int
+  year        Int
+  amount      Float
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, categoryId, month, year])
+  @@index([householdId, month, year])
+  @@map("budgets")
 }
