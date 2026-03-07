@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { getUserHouseholds } from '@/services/household.service'
 import { createCategory, getCategories } from '@/services/category.service'
 import { CategoryManager } from '@/components/category/category-manager'
+import type { CreateCategoryInput } from '@/lib/validations/category'
 
 export default async function CategoriesPage({
   searchParams,
@@ -24,7 +25,7 @@ export default async function CategoriesPage({
 
   const categories = await getCategories(householdId)
 
-  async function handleCreate(input: any) {
+  async function handleCreate(input: CreateCategoryInput) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
@@ -35,7 +36,15 @@ export default async function CategoriesPage({
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-6">
       <h1 className="text-2xl font-bold">Categories</h1>
-      <CategoryManager categories={categories as any} onCreate={handleCreate} />
+      <CategoryManager
+        categories={categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          color: category.color,
+          emoji: category.emoji,
+        }))}
+        onCreate={handleCreate}
+      />
     </main>
   )
 }

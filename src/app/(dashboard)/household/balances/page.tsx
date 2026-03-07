@@ -8,6 +8,7 @@ import { BalanceCard } from '@/components/balance/balance-card'
 import { SimplifiedDebts } from '@/components/balance/simplified-debts'
 import { SettleUpForm } from '@/components/balance/settle-up-form'
 import { SettlementHistory } from '@/components/balance/settlement-history'
+import type { CreateSettlementInput } from '@/lib/validations/settlement'
 
 export default async function BalancesPage({
   searchParams,
@@ -39,7 +40,7 @@ export default async function BalancesPage({
     toName: members.find((m) => m.userId === debt.toUserId)?.user.name ?? 'Unknown',
   }))
 
-  async function handleSettle(input: any) {
+  async function handleSettle(input: CreateSettlementInput) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
@@ -78,7 +79,15 @@ export default async function BalancesPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Settlement history</h2>
-        <SettlementHistory items={settlements as any} />
+        <SettlementHistory
+          items={settlements.map((settlement) => ({
+            id: settlement.id,
+            payer: { name: settlement.payer.name },
+            receiver: { name: settlement.receiver.name },
+            amount: settlement.amount,
+            date: settlement.date,
+          }))}
+        />
       </section>
     </main>
   )

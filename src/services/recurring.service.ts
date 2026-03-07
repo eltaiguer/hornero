@@ -126,7 +126,12 @@ export async function processDueExpenses(now = new Date()) {
       select: { userId: true, salary: true },
     })
 
-    const splits = calculateSplits(item.amount, item.splitMethod as any, members, item.splitConfig ?? undefined)
+    const splits = calculateSplits(
+      item.amount,
+      item.splitMethod as CreateRecurringExpenseInput['splitMethod'],
+      members,
+      item.splitConfig ?? undefined
+    )
 
     await prisma.$transaction(async (tx) => {
       const expense = await tx.expense.create({

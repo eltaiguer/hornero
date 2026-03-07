@@ -14,9 +14,15 @@ function parseExpenseFilters(url: string) {
     return Number.isNaN(parsed) ? undefined : parsed
   }
 
+  const parseDate = (value: string | null) => {
+    if (!value) return undefined
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed
+  }
+
   return {
-    dateFrom: search.get('dateFrom') ?? undefined,
-    dateTo: search.get('dateTo') ?? undefined,
+    dateFrom: parseDate(search.get('dateFrom')),
+    dateTo: parseDate(search.get('dateTo')),
     categoryId: search.get('categoryId') ?? undefined,
     payerId: search.get('payerId') ?? undefined,
     minAmount: parseNumber(search.get('minAmount')),

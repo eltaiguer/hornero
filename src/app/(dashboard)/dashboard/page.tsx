@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { getUserHouseholds } from '@/services/household.service'
 import { CreateHouseholdForm } from '@/components/household/create-household-form'
 import { createHousehold } from '@/services/household.service'
+import type { CreateHouseholdInput } from '@/lib/validations/household'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -13,11 +14,11 @@ export default async function DashboardPage() {
 
   const households = await getUserHouseholds(session.user.id)
 
-  async function handleCreate(data: { name: string; currency: string }) {
+  async function handleCreate(data: CreateHouseholdInput) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
-    const household = await createHousehold(data as any, s.user.id)
+    const household = await createHousehold(data, s.user.id)
     redirect(`/household/members?id=${household.id}`)
   }
 

@@ -32,7 +32,7 @@ function distributeByWeights(
   const roundedTotalCents = sumCents(roundedShares)
   let remainingCents = totalCents - roundedTotalCents
 
-  const indexesByPriority = [...rawShares.keys()].sort((a, b) => rawShares[b] - rawShares[a])
+  const indexesByPriority = Array.from(rawShares.keys()).sort((a, b) => rawShares[b] - rawShares[a])
 
   for (const index of indexesByPriority) {
     if (remainingCents === 0) {

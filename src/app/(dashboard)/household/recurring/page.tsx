@@ -11,6 +11,7 @@ import { getCategories } from '@/services/category.service'
 import { RecurringExpenseForm } from '@/components/recurring/recurring-expense-form'
 import { RecurringExpenseList } from '@/components/recurring/recurring-expense-list'
 import { RecurringExpenseActions } from '@/components/recurring/recurring-expense-actions'
+import type { CreateRecurringExpenseInput } from '@/lib/validations/recurring'
 
 export default async function RecurringPage({
   searchParams,
@@ -35,7 +36,7 @@ export default async function RecurringPage({
     getRecurringExpenses(householdId),
   ])
 
-  async function handleCreate(input: any) {
+  async function handleCreate(input: CreateRecurringExpenseInput) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
@@ -71,7 +72,16 @@ export default async function RecurringPage({
       />
 
       <div className="space-y-3">
-        <RecurringExpenseList items={recurring as any} />
+        <RecurringExpenseList
+          items={recurring.map((item) => ({
+            id: item.id,
+            description: item.description,
+            amount: item.amount,
+            frequency: item.frequency,
+            nextDueDate: item.nextDueDate,
+            active: item.active,
+          }))}
+        />
         {recurring.map((item) => (
           <RecurringExpenseActions
             key={item.id}

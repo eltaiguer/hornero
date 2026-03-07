@@ -6,6 +6,7 @@ import { getCategories } from '@/services/category.service'
 import { BudgetOverview } from '@/components/budget/budget-overview'
 import { BudgetForm } from '@/components/budget/budget-form'
 import { BudgetAlert } from '@/components/budget/budget-alert'
+import type { CreateBudgetInput } from '@/lib/validations/budget'
 
 export default async function BudgetsPage({
   searchParams,
@@ -34,7 +35,7 @@ export default async function BudgetsPage({
     checkBudgetAlerts(householdId, month, year),
   ])
 
-  async function handleSetBudget(input: any) {
+  async function handleSetBudget(input: CreateBudgetInput) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
@@ -48,7 +49,7 @@ export default async function BudgetsPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Alerts</h2>
-        <BudgetAlert alerts={alerts as any} />
+        <BudgetAlert alerts={alerts} />
       </section>
 
       <section className="space-y-3">

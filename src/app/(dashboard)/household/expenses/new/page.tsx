@@ -4,6 +4,7 @@ import { getUserHouseholds } from '@/services/household.service'
 import { getCategories } from '@/services/category.service'
 import { createExpense } from '@/services/expense.service'
 import { ExpenseForm } from '@/components/expense/expense-form'
+import type { CreateExpenseInput } from '@/lib/validations/expense'
 
 export default async function NewExpensePage({
   searchParams,
@@ -25,7 +26,7 @@ export default async function NewExpensePage({
 
   const categories = await getCategories(householdId)
 
-  async function handleSubmit(data: any) {
+  async function handleSubmit(data: CreateExpenseInput) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')

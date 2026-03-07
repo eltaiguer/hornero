@@ -13,7 +13,6 @@ export function RecurringExpenseForm({ categories, onSubmit }: RecurringExpenseF
   const [description, setDescription] = useState('')
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '')
   const [splitMethod, setSplitMethod] = useState<'equal' | 'proportional' | 'custom'>('equal')
-  const [splitConfig, setSplitConfig] = useState('')
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -26,7 +25,7 @@ export function RecurringExpenseForm({ categories, onSubmit }: RecurringExpenseF
       description: description.trim(),
       categoryId,
       splitMethod,
-      splitConfig: splitMethod === 'custom' ? splitConfig : undefined,
+      splitConfig: undefined,
       frequency,
       startDate: new Date(startDate),
       endDate: endDate ? new Date(endDate) : undefined,
@@ -56,7 +55,7 @@ export function RecurringExpenseForm({ categories, onSubmit }: RecurringExpenseF
 
       <div>
         <label htmlFor="rec-split" className="block text-sm font-medium">Split method</label>
-        <select id="rec-split" value={splitMethod} onChange={(e) => setSplitMethod(e.target.value as any)} className="mt-1 w-full rounded-md border px-3 py-2">
+        <select id="rec-split" value={splitMethod} onChange={(e) => setSplitMethod(e.target.value as 'equal' | 'proportional' | 'custom')} className="mt-1 w-full rounded-md border px-3 py-2">
           <option value="equal">equal</option>
           <option value="proportional">proportional</option>
           <option value="custom">custom</option>
@@ -65,7 +64,7 @@ export function RecurringExpenseForm({ categories, onSubmit }: RecurringExpenseF
 
       <div>
         <label htmlFor="rec-frequency" className="block text-sm font-medium">Frequency</label>
-        <select id="rec-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value as any)} className="mt-1 w-full rounded-md border px-3 py-2">
+        <select id="rec-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly')} className="mt-1 w-full rounded-md border px-3 py-2">
           <option value="daily">daily</option>
           <option value="weekly">weekly</option>
           <option value="monthly">monthly</option>

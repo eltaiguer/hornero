@@ -26,6 +26,7 @@ describe('Balance Lifecycle (Integration)', () => {
   })
 
   beforeEach(async () => {
+    await prisma.recurringExpense.deleteMany()
     await prisma.settlement.deleteMany()
     await prisma.expenseSplit.deleteMany()
     await prisma.expense.deleteMany()

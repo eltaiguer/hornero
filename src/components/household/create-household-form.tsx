@@ -10,7 +10,7 @@ interface Props {
 
 export function CreateHouseholdForm({ onSubmit }: Props) {
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState<string>('USD')
+  const [currency, setCurrency] = useState<CreateHouseholdInput['currency']>('USD')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -25,7 +25,7 @@ export function CreateHouseholdForm({ onSubmit }: Props) {
 
     setLoading(true)
     try {
-      await onSubmit({ name: name.trim(), currency: currency as any })
+      await onSubmit({ name: name.trim(), currency })
     } finally {
       setLoading(false)
     }
@@ -55,7 +55,12 @@ export function CreateHouseholdForm({ onSubmit }: Props) {
         <select
           id="currency"
           value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
+          onChange={(e) => {
+            const next = SUPPORTED_CURRENCIES.find((item) => item === e.target.value)
+            if (next) {
+              setCurrency(next)
+            }
+          }}
           className="mt-1 block w-full rounded-md border px-3 py-2"
         >
           {SUPPORTED_CURRENCIES.map((c) => (

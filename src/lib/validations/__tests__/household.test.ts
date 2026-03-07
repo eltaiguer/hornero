@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   createHouseholdSchema,
   updateHouseholdSettingsSchema,
-  SUPPORTED_CURRENCIES,
   SPLIT_METHODS,
 } from '../household'
 

@@ -41,7 +41,16 @@ export default async function ExpensesPage({
         </Link>
       </div>
 
-      <ExpenseList expenses={expenses.items as any} />
+      <ExpenseList
+        expenses={expenses.items.map((item) => ({
+          id: item.id,
+          description: item.description,
+          amount: item.amount,
+          date: item.date,
+          category: { name: item.category.name, emoji: item.category.emoji },
+          payer: { name: item.payer.name },
+        }))}
+      />
     </main>
   )
 }
