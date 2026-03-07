@@ -6,14 +6,28 @@ import {
   getHouseholdMembers,
 } from '../member.service'
 import { prisma } from '@/lib/prisma'
+import * as splitService from '../split.service'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     householdMember: {
       findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
     },
+    memberSalaryHistory: {
+      upsert: vi.fn(),
+      findMany: vi.fn(),
+    },
+    expense: {
+      findMany: vi.fn(),
+    },
+    expenseSplit: {
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+    },
+    $transaction: vi.fn(async (fn: any) => fn(prisma)),
   },
 }))
 
@@ -23,21 +37,66 @@ describe('MemberService', () => {
   })
 
   describe('updateMemberSalary', () => {
-    it('should update salary for a member', async () => {
+    it('should upsert salary history and recompute proportional splits from effective date', async () => {
       const mockMember = { id: 'm-1', salary: 5000 }
       vi.mocked(prisma.householdMember.update).mockResolvedValue(mockMember as any)
+      vi.mocked(prisma.householdMember.findUniqueOrThrow).mockResolvedValue(mockMember as any)
+      vi.mocked(prisma.memberSalaryHistory.upsert).mockResolvedValue({ id: 'h-1' } as any)
+      vi.mocked(prisma.expense.findMany).mockResolvedValue([
+        { id: 'exp-1', amount: 120, date: new Date('2026-03-20T00:00:00.000Z'), splitConfig: null },
+      ] as any)
+      vi.mocked(prisma.householdMember.findMany)
+        .mockResolvedValueOnce([
+          { userId: 'user-1', salary: 5000 },
+          { userId: 'user-2', salary: 2000 },
+        ] as any)
+        .mockResolvedValueOnce([
+          { userId: 'user-1', salary: 5000 },
+          { userId: 'user-2', salary: 2000 },
+        ] as any)
+      vi.mocked(prisma.memberSalaryHistory.findMany).mockResolvedValue([
+        {
+          householdId: 'hh-1',
+          userId: 'user-1',
+          salary: 5000,
+          effectiveFrom: new Date('2026-03-01T00:00:00.000Z'),
+        },
+      ] as any)
+      vi.spyOn(splitService, 'calculateSplits').mockReturnValue([
+        { userId: 'user-1', amountOwed: 60 },
+        { userId: 'user-2', amountOwed: 60 },
+      ])
+      vi.mocked(prisma.expenseSplit.deleteMany).mockResolvedValue({ count: 2 } as any)
+      vi.mocked(prisma.expenseSplit.createMany).mockResolvedValue({ count: 2 } as any)
 
-      const result = await updateMemberSalary('hh-1', 'user-1', 5000)
+      const effectiveFrom = new Date('2026-03-01T00:00:00.000Z')
+      const result = await updateMemberSalary('hh-1', 'user-1', 5000, effectiveFrom)
       expect(result.salary).toBe(5000)
-      expect(prisma.householdMember.update).toHaveBeenCalledWith({
-        where: { householdId_userId: { householdId: 'hh-1', userId: 'user-1' } },
-        data: { salary: 5000 },
+      expect(prisma.memberSalaryHistory.upsert).toHaveBeenCalledWith({
+        where: {
+          householdId_userId_effectiveFrom: {
+            householdId: 'hh-1',
+            userId: 'user-1',
+            effectiveFrom,
+          },
+        },
+        update: { salary: 5000 },
+        create: {
+          householdId: 'hh-1',
+          userId: 'user-1',
+          salary: 5000,
+          effectiveFrom,
+        },
       })
+      expect(prisma.expenseSplit.deleteMany).toHaveBeenCalledWith({ where: { expenseId: 'exp-1' } })
     })
 
     it('should allow clearing salary with null', async () => {
       const mockMember = { id: 'm-1', salary: null }
       vi.mocked(prisma.householdMember.update).mockResolvedValue(mockMember as any)
+      vi.mocked(prisma.householdMember.findUniqueOrThrow).mockResolvedValue(mockMember as any)
+      vi.mocked(prisma.memberSalaryHistory.upsert).mockResolvedValue({ id: 'h-1' } as any)
+      vi.mocked(prisma.expense.findMany).mockResolvedValue([] as any)
 
       const result = await updateMemberSalary('hh-1', 'user-1', null)
       expect(result.salary).toBeNull()

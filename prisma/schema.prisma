@@ -20,6 +20,7 @@ model User {
 
   createdHouseholds Household[]       @relation("HouseholdCreator")
   memberships       HouseholdMember[]
+  salaryHistory     MemberSalaryHistory[]
   paidExpenses      Expense[]         @relation("ExpensePayer")
   expenseSplits     ExpenseSplit[]
   settlementsPaid     Settlement[] @relation("SettlementPayer")
@@ -83,6 +84,7 @@ model Household {
 
   createdBy User              @relation("HouseholdCreator", fields: [createdById], references: [id])
   members   HouseholdMember[]
+  salaryHistory MemberSalaryHistory[]
   invites   HouseholdInvite[]
   categories Category[]
   expenses   Expense[]
@@ -110,6 +112,22 @@ model HouseholdMember {
 
   @@unique([householdId, userId])
   @@map("household_members")
+}
+
+model MemberSalaryHistory {
+  id            String    @id @default(cuid())
+  householdId   String
+  userId        String
+  salary        Float?
+  effectiveFrom DateTime
+  createdAt     DateTime  @default(now())
+  household     Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId, effectiveFrom])
+  @@index([householdId, userId, effectiveFrom])
+  @@index([householdId, effectiveFrom])
+  @@map("member_salary_history")
 }
 
 model HouseholdInvite {

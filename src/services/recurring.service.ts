@@ -7,6 +7,7 @@ import {
   type UpdateRecurringExpenseInput,
 } from '@/lib/validations/recurring'
 import { calculateSplits } from './split.service'
+import { getMembersWithEffectiveSalary } from './member.service'
 
 export function advanceNextDueDate(current: Date, frequency: RecurringFrequency): Date {
   const next = new Date(current)
@@ -121,10 +122,7 @@ export async function processDueExpenses(now = new Date()) {
   let createdCount = 0
 
   for (const item of recurring) {
-    const members = await prisma.householdMember.findMany({
-      where: { householdId: item.householdId },
-      select: { userId: true, salary: true },
-    })
+    const members = await getMembersWithEffectiveSalary(item.householdId, item.nextDueDate)
 
     const splits = calculateSplits(
       item.amount,

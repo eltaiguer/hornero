@@ -8,14 +8,12 @@ import {
 } from '../expense.service'
 import { prisma } from '@/lib/prisma'
 import * as splitService from '../split.service'
+import * as memberService from '../member.service'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     category: {
       findFirst: vi.fn(),
-    },
-    householdMember: {
-      findMany: vi.fn(),
     },
     expense: {
       create: vi.fn(),
@@ -32,6 +30,9 @@ vi.mock('@/lib/prisma', () => ({
     $transaction: vi.fn(async (fn: any) => fn(prisma)),
   },
 }))
+vi.mock('../member.service', () => ({
+  getMembersWithEffectiveSalary: vi.fn(),
+}))
 
 describe('ExpenseService', () => {
   beforeEach(() => {
@@ -40,7 +41,7 @@ describe('ExpenseService', () => {
 
   it('creates expense and splits in a transaction', async () => {
     vi.mocked(prisma.category.findFirst).mockResolvedValue({ id: 'cat-1' } as any)
-    vi.mocked(prisma.householdMember.findMany).mockResolvedValue([
+    vi.mocked(memberService.getMembersWithEffectiveSalary).mockResolvedValue([
       { userId: 'u1', salary: 1000 },
       { userId: 'u2', salary: 1000 },
     ] as any)
@@ -97,7 +98,7 @@ describe('ExpenseService', () => {
       splitConfig: null,
       payerId: 'u1',
     } as any)
-    vi.mocked(prisma.householdMember.findMany).mockResolvedValue([
+    vi.mocked(memberService.getMembersWithEffectiveSalary).mockResolvedValue([
       { userId: 'u1', salary: 1000 },
       { userId: 'u2', salary: 1000 },
     ] as any)

@@ -11,11 +11,11 @@ import {
 } from '../recurring.service'
 import { prisma } from '@/lib/prisma'
 import * as splitService from '../split.service'
+import * as memberService from '../member.service'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     category: { findFirst: vi.fn() },
-    householdMember: { findMany: vi.fn() },
     recurringExpense: {
       create: vi.fn(),
       update: vi.fn(),
@@ -27,6 +27,9 @@ vi.mock('@/lib/prisma', () => ({
     expenseSplit: { createMany: vi.fn() },
     $transaction: vi.fn(async (fn: any) => fn(prisma)),
   },
+}))
+vi.mock('../member.service', () => ({
+  getMembersWithEffectiveSalary: vi.fn(),
 }))
 
 describe('RecurringService', () => {
@@ -94,7 +97,7 @@ describe('RecurringService', () => {
     ] as any)
 
     vi.mocked(prisma.expense.findMany).mockResolvedValue([] as any)
-    vi.mocked(prisma.householdMember.findMany).mockResolvedValue([
+    vi.mocked(memberService.getMembersWithEffectiveSalary).mockResolvedValue([
       { userId: 'u1', salary: 1000 },
       { userId: 'u2', salary: 1000 },
     ] as any)

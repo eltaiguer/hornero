@@ -45,10 +45,10 @@ describe('PATCH /api/households/[id]/members', () => {
     vi.mocked(updateMemberSalary).mockResolvedValue({ salary: 6000 } as any)
 
     const req = {
-      json: () => Promise.resolve({ salary: 6000 }),
+      json: () => Promise.resolve({ salary: 6000, effectiveFrom: '2026-04-01' }),
     } as any
     const res = await PATCH(req, routeContext)
     expect(res.status).toBe(200)
-    expect(updateMemberSalary).toHaveBeenCalledWith('hh-1', 'user-1', 6000)
+    expect(updateMemberSalary).toHaveBeenCalledWith('hh-1', 'user-1', 6000, '2026-04-01')
   })
 })

@@ -4,27 +4,28 @@ import { useState } from 'react'
 
 interface Props {
   currentSalary: number | null
-  onSave: (salary: number | null) => void | Promise<void>
+  onSave: (salary: number | null, effectiveFrom: string) => void | Promise<void>
   currency: string
 }
 
 export function SalaryInput({ currentSalary, onSave, currency }: Props) {
   const [value, setValue] = useState(currentSalary?.toString() ?? '')
+  const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().slice(0, 10))
   const [loading, setLoading] = useState(false)
 
   async function handleSave() {
     setLoading(true)
     try {
       const numericValue = value === '' ? null : Number(value)
-      await onSave(numericValue)
+      await onSave(numericValue, effectiveFrom)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-gray-500">{currency}</span>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <span className="text-sm font-medium text-gray-500 sm:w-12">{currency}</span>
       <input
         type="number"
         min="0"
@@ -33,6 +34,13 @@ export function SalaryInput({ currentSalary, onSave, currency }: Props) {
         onChange={(e) => setValue(e.target.value)}
         placeholder="Enter net monthly salary"
         className="block w-full rounded-md border px-3 py-2"
+      />
+      <input
+        type="date"
+        value={effectiveFrom}
+        onChange={(e) => setEffectiveFrom(e.target.value)}
+        className="block rounded-md border px-3 py-2"
+        aria-label="Salary effective date"
       />
       <button
         onClick={handleSave}

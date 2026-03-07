@@ -8,6 +8,7 @@ import {
   type UpdateExpenseInput,
 } from '@/lib/validations/expense'
 import { calculateSplits } from './split.service'
+import { getMembersWithEffectiveSalary } from './member.service'
 
 function getDateToInclusive(date: Date) {
   const inclusive = new Date(date)
@@ -31,10 +32,7 @@ export async function createExpense(
     throw new Error('Category not found')
   }
 
-  const members = await prisma.householdMember.findMany({
-    where: { householdId },
-    select: { userId: true, salary: true },
-  })
+  const members = await getMembersWithEffectiveSalary(householdId, validated.date)
 
   if (!members.some((member) => member.userId === payerId)) {
     throw new Error('Payer must be a household member')
@@ -160,10 +158,7 @@ export async function updateExpense(expenseId: string, input: UpdateExpenseInput
     notes: validated.notes ?? current.notes ?? undefined,
   }
 
-  const members = await prisma.householdMember.findMany({
-    where: { householdId: current.householdId },
-    select: { userId: true, salary: true },
-  })
+  const members = await getMembersWithEffectiveSalary(current.householdId, nextState.date)
 
   const splits = calculateSplits(
     nextState.amount,

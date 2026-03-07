@@ -33,11 +33,11 @@ export default async function MembersPage({ searchParams }: Props) {
 
   const isOwner = await isHouseholdOwner(id, session.user.id)
 
-  async function handleSalaryUpdate(salary: number | null) {
+  async function handleSalaryUpdate(salary: number | null, effectiveFrom: string) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
-    await updateMemberSalary(id!, s.user.id, salary)
+    await updateMemberSalary(id!, s.user.id, salary, effectiveFrom)
   }
 
   async function handleInvite(email: string) {

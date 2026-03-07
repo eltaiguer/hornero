@@ -26,6 +26,22 @@ describe('updateSalarySchema', () => {
     const result = updateSalarySchema.safeParse({ salary: 'abc' })
     expect(result.success).toBe(false)
   })
+
+  it('should accept optional effectiveFrom date', () => {
+    const result = updateSalarySchema.safeParse({
+      salary: 4500,
+      effectiveFrom: '2026-04-01',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('should reject invalid effectiveFrom date', () => {
+    const result = updateSalarySchema.safeParse({
+      salary: 4500,
+      effectiveFrom: 'not-a-date',
+    })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe('inviteMemberSchema', () => {

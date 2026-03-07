@@ -34,7 +34,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   try {
     const body = await request.json()
-    const result = await updateMemberSalary(id, session.user.id, body.salary)
+    const result = await updateMemberSalary(id, session.user.id, body.salary, body.effectiveFrom)
     return jsonResponse(result)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Bad request'

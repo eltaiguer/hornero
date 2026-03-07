@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const updateSalarySchema = z.object({
   salary: z.number().min(0, 'Salary cannot be negative').nullable(),
+  effectiveFrom: z.coerce.date().optional(),
 })
 
 export const inviteMemberSchema = z.object({

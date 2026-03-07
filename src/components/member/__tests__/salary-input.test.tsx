@@ -22,7 +22,7 @@ describe('SalaryInput', () => {
     await user.type(screen.getByRole('spinbutton'), '6500')
     await user.click(screen.getByRole('button', { name: /save/i }))
 
-    expect(onSave).toHaveBeenCalledWith(6500)
+    expect(onSave).toHaveBeenCalledWith(6500, expect.any(String))
   })
 
   it('should display currency label', () => {

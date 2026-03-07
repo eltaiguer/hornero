@@ -114,4 +114,63 @@ describe('Expense Lifecycle (Integration)', () => {
     const deleted = await getExpenseById(proportionalExpense.id)
     expect(deleted).toBeNull()
   })
+
+  it('recomputes proportional splits from effective salary date onward', async () => {
+    const owner = await prisma.user.create({ data: { email: 'owner-salary-hist@test.com', name: 'Owner' } })
+    const member = await prisma.user.create({ data: { email: 'member-salary-hist@test.com', name: 'Member' } })
+
+    const household = await createHousehold({ name: 'Salary History HH', currency: 'USD' }, owner.id)
+    await prisma.householdMember.create({
+      data: { householdId: household.id, userId: member.id, role: 'member' },
+    })
+
+    await updateMemberSalary(household.id, owner.id, 4000, new Date('2026-03-01T00:00:00.000Z'))
+    await updateMemberSalary(household.id, member.id, 2000, new Date('2026-03-01T00:00:00.000Z'))
+
+    const category = await prisma.category.findFirst({ where: { householdId: household.id, name: 'Groceries' } })
+    expect(category).not.toBeNull()
+
+    const beforeChange = await createExpense(
+      household.id,
+      {
+        amount: 120,
+        description: 'Before salary change',
+        date: new Date('2026-03-10T00:00:00.000Z'),
+        categoryId: category!.id,
+        splitMethod: 'proportional',
+      },
+      owner.id
+    )
+
+    const afterChange = await createExpense(
+      household.id,
+      {
+        amount: 120,
+        description: 'After salary change',
+        date: new Date('2026-03-20T00:00:00.000Z'),
+        categoryId: category!.id,
+        splitMethod: 'proportional',
+      },
+      owner.id
+    )
+
+    const initialAfterSplits = await prisma.expenseSplit.findMany({
+      where: { expenseId: afterChange.id },
+    })
+    const initialAfterByUser = new Map(initialAfterSplits.map((split) => [split.userId, split.amountOwed]))
+    expect(initialAfterByUser.get(owner.id)).toBe(80)
+    expect(initialAfterByUser.get(member.id)).toBe(40)
+
+    await updateMemberSalary(household.id, member.id, 4000, new Date('2026-03-15T00:00:00.000Z'))
+
+    const beforeSplits = await prisma.expenseSplit.findMany({ where: { expenseId: beforeChange.id } })
+    const afterSplits = await prisma.expenseSplit.findMany({ where: { expenseId: afterChange.id } })
+    const beforeByUser = new Map(beforeSplits.map((split) => [split.userId, split.amountOwed]))
+    const afterByUser = new Map(afterSplits.map((split) => [split.userId, split.amountOwed]))
+
+    expect(beforeByUser.get(owner.id)).toBe(80)
+    expect(beforeByUser.get(member.id)).toBe(40)
+    expect(afterByUser.get(owner.id)).toBe(60)
+    expect(afterByUser.get(member.id)).toBe(60)
+  })
 })
