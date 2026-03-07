@@ -6,12 +6,22 @@ import { SignInForm } from '../signin-form'
 vi.mock('next-auth/react', () => ({
   signIn: vi.fn(),
 }))
+const mockPush = vi.fn()
+const mockRefresh = vi.fn()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    refresh: mockRefresh,
+  }),
+}))
 
 import { signIn } from 'next-auth/react'
 
 describe('SignInForm', () => {
   beforeEach(() => {
     vi.mocked(signIn).mockReset()
+    mockPush.mockReset()
+    mockRefresh.mockReset()
   })
 
   it('should render email input and submit button', () => {
@@ -30,7 +40,9 @@ describe('SignInForm', () => {
     expect(signIn).toHaveBeenCalledWith('credentials', {
       email: 'user@example.com',
       callbackUrl: '/dashboard',
+      redirect: false,
     })
+    expect(mockPush).toHaveBeenCalledWith('/dashboard')
   })
 
   it('should show validation error for invalid email', async () => {
@@ -42,5 +54,17 @@ describe('SignInForm', () => {
 
     expect(screen.getByText(/valid email/i)).toBeInTheDocument()
     expect(signIn).not.toHaveBeenCalled()
+  })
+
+  it('should show auth failure error', async () => {
+    vi.mocked(signIn).mockResolvedValue({ error: 'Configuration' } as any)
+    const user = userEvent.setup()
+    render(<SignInForm />)
+
+    await user.type(screen.getByLabelText(/email/i), 'user@example.com')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(screen.getByText(/sign in failed/i)).toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalled()
   })
 })

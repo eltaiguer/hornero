@@ -24,6 +24,7 @@ model User {
   expenseSplits     ExpenseSplit[]
   settlementsPaid     Settlement[] @relation("SettlementPayer")
   settlementsReceived Settlement[] @relation("SettlementReceiver")
+  recurringExpenses   RecurringExpense[] @relation("RecurringPayer")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -87,6 +88,7 @@ model Household {
   expenses   Expense[]
   settlements Settlement[]
   budgets    Budget[]
+  recurringExpenses RecurringExpense[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,6 +138,7 @@ model Category {
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   expenses    Expense[]
   budgets     Budget[]
+  recurringExpenses RecurringExpense[]
 
   @@unique([householdId, name])
   @@index([householdId])
@@ -213,4 +216,28 @@ model Budget {
   @@unique([householdId, categoryId, month, year])
   @@index([householdId, month, year])
   @@map("budgets")
+}
+
+model RecurringExpense {
+  id          String    @id @default(cuid())
+  householdId String
+  payerId     String
+  amount      Float
+  description String
+  categoryId  String
+  splitMethod String
+  splitConfig String?
+  frequency   String
+  nextDueDate DateTime
+  endDate     DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  payer       User      @relation("RecurringPayer", fields: [payerId], references: [id])
+  category    Category  @relation(fields: [categoryId], references: [id])
+
+  @@index([householdId])
+  @@index([nextDueDate])
+  @@index([active])
+  @@map("recurring_expenses")
 }

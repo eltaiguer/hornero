@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export function SignInForm() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -18,7 +20,20 @@ export function SignInForm() {
     }
 
     setLoading(true)
-    await signIn('credentials', { email, callbackUrl: '/dashboard' })
+    const result = await signIn('credentials', {
+      email,
+      callbackUrl: '/dashboard',
+      redirect: false,
+    })
+
+    if (result?.error) {
+      setError('Sign in failed. Check your auth configuration and try again.')
+      setLoading(false)
+      return
+    }
+
+    router.push('/dashboard')
+    router.refresh()
     setLoading(false)
   }
 

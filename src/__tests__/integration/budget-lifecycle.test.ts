@@ -25,6 +25,7 @@ describe('Budget Lifecycle (Integration)', () => {
   })
 
   beforeEach(async () => {
+    await prisma.recurringExpense.deleteMany()
     await prisma.budget.deleteMany()
     await prisma.settlement.deleteMany()
     await prisma.expenseSplit.deleteMany()
