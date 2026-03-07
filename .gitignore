@@ -44,3 +44,7 @@ prisma/*.db
 prisma/*.db-journal
 *.db
 *.db-journal
+
+# generated uploads and local tool artifacts
+public/uploads/
+/Library/

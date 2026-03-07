@@ -156,6 +156,7 @@ model Expense {
   splitMethod String
   splitConfig String?
   notes       String?
+  receiptUrl  String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)

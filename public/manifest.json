@@ -1,0 +1,16 @@
+{
+  "name": "Hornero Household Finance",
+  "short_name": "Hornero",
+  "description": "Shared household finance tracking",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
