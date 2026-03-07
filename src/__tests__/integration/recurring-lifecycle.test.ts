@@ -12,6 +12,7 @@ vi.mock('@/lib/prisma', () => ({
 
 const { createHousehold } = await import('@/services/household.service')
 const { createRecurringExpense, processDueExpenses } = await import('@/services/recurring.service')
+const { getExpenses } = await import('@/services/expense.service')
 
 describe('Recurring Lifecycle (Integration)', () => {
   beforeAll(async () => {
@@ -65,5 +66,39 @@ describe('Recurring Lifecycle (Integration)', () => {
 
     const expenses = await prisma.expense.findMany({ where: { householdId: household.id } })
     expect(expenses).toHaveLength(1)
+  })
+
+  it('materializes due recurring expenses when listing expenses', async () => {
+    const owner = await prisma.user.create({ data: { email: 'rec-lazy-owner@test.com', name: 'Owner' } })
+    const member = await prisma.user.create({ data: { email: 'rec-lazy-member@test.com', name: 'Member' } })
+
+    const household = await createHousehold({ name: 'Recurring Lazy HH', currency: 'USD' }, owner.id)
+    await prisma.householdMember.create({
+      data: { householdId: household.id, userId: member.id, role: 'member' },
+    })
+
+    const category = await prisma.category.findFirst({ where: { householdId: household.id, name: 'Utilities' } })
+    expect(category).not.toBeNull()
+
+    await createRecurringExpense(household.id, owner.id, {
+      amount: 75,
+      description: 'Water',
+      categoryId: category!.id,
+      splitMethod: 'equal',
+      frequency: 'monthly',
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+    })
+
+    const before = await prisma.expense.count({ where: { householdId: household.id } })
+    expect(before).toBe(0)
+
+    const listed = await getExpenses(household.id, {
+      page: 1,
+      pageSize: 20,
+    })
+
+    expect(listed.items).toHaveLength(1)
+    const after = await prisma.expense.count({ where: { householdId: household.id } })
+    expect(after).toBe(1)
   })
 })

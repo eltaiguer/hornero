@@ -9,6 +9,9 @@ import {
 import { calculateSplits } from './split.service'
 import { getMembersWithEffectiveSalary } from './member.service'
 
+type ProcessResult = { createdCount: number }
+type RecurringItems = Awaited<ReturnType<typeof prisma.recurringExpense.findMany>>
+
 export function advanceNextDueDate(current: Date, frequency: RecurringFrequency): Date {
   const next = new Date(current)
 
@@ -111,14 +114,7 @@ export async function getRecurringExpenses(householdId: string) {
   })
 }
 
-export async function processDueExpenses(now = new Date()) {
-  const recurring = await prisma.recurringExpense.findMany({
-    where: {
-      active: true,
-      nextDueDate: { lte: now },
-    },
-  })
-
+async function materializeRecurringItems(recurring: RecurringItems): Promise<ProcessResult> {
   let createdCount = 0
 
   for (const item of recurring) {
@@ -169,4 +165,30 @@ export async function processDueExpenses(now = new Date()) {
   }
 
   return { createdCount }
+}
+
+export async function processDueExpenses(now = new Date()): Promise<ProcessResult> {
+  const recurring = await prisma.recurringExpense.findMany({
+    where: {
+      active: true,
+      nextDueDate: { lte: now },
+    },
+  })
+
+  return materializeRecurringItems(recurring)
+}
+
+export async function ensureDueExpensesForHousehold(
+  householdId: string,
+  now = new Date()
+): Promise<ProcessResult> {
+  const recurring = await prisma.recurringExpense.findMany({
+    where: {
+      householdId,
+      active: true,
+      nextDueDate: { lte: now },
+    },
+  })
+
+  return materializeRecurringItems(recurring)
 }

@@ -9,6 +9,7 @@ import {
 import { prisma } from '@/lib/prisma'
 import * as splitService from '../split.service'
 import * as memberService from '../member.service'
+import * as recurringService from '../recurring.service'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
@@ -32,6 +33,9 @@ vi.mock('@/lib/prisma', () => ({
 }))
 vi.mock('../member.service', () => ({
   getMembersWithEffectiveSalary: vi.fn(),
+}))
+vi.mock('../recurring.service', () => ({
+  ensureDueExpensesForHousehold: vi.fn(),
 }))
 
 describe('ExpenseService', () => {
@@ -69,6 +73,7 @@ describe('ExpenseService', () => {
   })
 
   it('lists expenses with pagination', async () => {
+    vi.mocked(recurringService.ensureDueExpensesForHousehold).mockResolvedValue({ createdCount: 0 })
     vi.mocked(prisma.expense.findMany).mockResolvedValue([{ id: 'exp-1' }] as any)
     vi.mocked(prisma.expense.count).mockResolvedValue(1)
 
@@ -76,6 +81,7 @@ describe('ExpenseService', () => {
 
     expect(result.items).toHaveLength(1)
     expect(result.total).toBe(1)
+    expect(recurringService.ensureDueExpensesForHousehold).toHaveBeenCalledWith('hh-1', expect.any(Date))
   })
 
   it('gets expense detail', async () => {

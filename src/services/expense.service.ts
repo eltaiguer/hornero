@@ -9,6 +9,7 @@ import {
 } from '@/lib/validations/expense'
 import { calculateSplits } from './split.service'
 import { getMembersWithEffectiveSalary } from './member.service'
+import { ensureDueExpensesForHousehold } from './recurring.service'
 
 function getDateToInclusive(date: Date) {
   const inclusive = new Date(date)
@@ -73,6 +74,8 @@ export async function createExpense(
 }
 
 export async function getExpenses(householdId: string, filters: Partial<ExpenseFilterInput>) {
+  await ensureDueExpensesForHousehold(householdId, new Date())
+
   const validated = expenseFilterSchema.parse(filters)
   const where: Record<string, unknown> = { householdId }
 

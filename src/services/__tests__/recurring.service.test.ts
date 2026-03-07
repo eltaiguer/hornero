@@ -3,6 +3,7 @@ import {
   advanceNextDueDate,
   createRecurringExpense,
   deleteRecurringExpense,
+  ensureDueExpensesForHousehold,
   getRecurringExpenses,
   pauseRecurringExpense,
   processDueExpenses,
@@ -125,6 +126,49 @@ describe('RecurringService', () => {
     await deleteRecurringExpense('r-1')
 
     expect(prisma.recurringExpense.delete).toHaveBeenCalledWith({ where: { id: 'r-1' } })
+  })
+
+  it('processes due recurring expenses for a single household', async () => {
+    const dueDate = new Date('2026-03-01T00:00:00.000Z')
+
+    vi.mocked(prisma.recurringExpense.findMany).mockResolvedValue([
+      {
+        id: 'r-1',
+        householdId: 'hh-1',
+        payerId: 'u1',
+        amount: 100,
+        description: 'Rent',
+        categoryId: 'cat-1',
+        splitMethod: 'equal',
+        splitConfig: null,
+        frequency: 'monthly',
+        nextDueDate: dueDate,
+        endDate: null,
+        active: true,
+      },
+    ] as any)
+    vi.mocked(memberService.getMembersWithEffectiveSalary).mockResolvedValue([
+      { userId: 'u1', salary: 1000 },
+      { userId: 'u2', salary: 1000 },
+    ] as any)
+    vi.spyOn(splitService, 'calculateSplits').mockReturnValue([
+      { userId: 'u1', amountOwed: 50 },
+      { userId: 'u2', amountOwed: 50 },
+    ])
+    vi.mocked(prisma.expense.create).mockResolvedValue({ id: 'exp-1' } as any)
+    vi.mocked(prisma.expenseSplit.createMany).mockResolvedValue({ count: 2 } as any)
+    vi.mocked(prisma.recurringExpense.update).mockResolvedValue({ id: 'r-1' } as any)
+
+    const result = await ensureDueExpensesForHousehold('hh-1', new Date('2026-03-10T00:00:00.000Z'))
+
+    expect(result.createdCount).toBe(1)
+    expect(prisma.recurringExpense.findMany).toHaveBeenCalledWith({
+      where: {
+        householdId: 'hh-1',
+        active: true,
+        nextDueDate: { lte: new Date('2026-03-10T00:00:00.000Z') },
+      },
+    })
   })
 
   it('advances due date by frequency', () => {
