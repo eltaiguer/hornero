@@ -15,6 +15,7 @@ vi.mock('@/lib/prisma', () => ({
     $transaction: vi.fn((fn: any) => fn({
       household: { create: vi.fn() },
       householdMember: { create: vi.fn() },
+      category: { createMany: vi.fn() },
     })),
   },
 }))
@@ -41,6 +42,9 @@ describe('HouseholdService', () => {
           },
           householdMember: {
             create: vi.fn().mockResolvedValue({ id: 'member-1' }),
+          },
+          category: {
+            createMany: vi.fn().mockResolvedValue({ count: 9 }),
           },
         }
         return fn(tx)

@@ -5,6 +5,7 @@ import {
   type CreateHouseholdInput,
   type UpdateHouseholdSettingsInput,
 } from '@/lib/validations/household'
+import { DEFAULT_CATEGORIES } from './category.service'
 
 export async function createHousehold(input: CreateHouseholdInput, userId: string) {
   const validated = createHouseholdSchema.parse(input)
@@ -25,6 +26,16 @@ export async function createHousehold(input: CreateHouseholdInput, userId: strin
         userId,
         role: 'owner',
       },
+    })
+
+    await tx.category.createMany({
+      data: DEFAULT_CATEGORIES.map((category) => ({
+        householdId: household.id,
+        name: category.name,
+        color: category.color,
+        emoji: category.emoji,
+        isDefault: true,
+      })),
     })
 
     return household

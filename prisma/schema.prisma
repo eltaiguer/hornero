@@ -20,6 +20,8 @@ model User {
 
   createdHouseholds Household[]       @relation("HouseholdCreator")
   memberships       HouseholdMember[]
+  paidExpenses      Expense[]         @relation("ExpensePayer")
+  expenseSplits     ExpenseSplit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -79,6 +81,8 @@ model Household {
   createdBy User              @relation("HouseholdCreator", fields: [createdById], references: [id])
   members   HouseholdMember[]
   invites   HouseholdInvite[]
+  categories Category[]
+  expenses   Expense[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -116,4 +120,59 @@ model HouseholdInvite {
   createdAt DateTime @default(now())
 
   @@map("household_invites")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String
+  color       String    @default("#6B7280")
+  emoji       String    @default("📁")
+  isDefault   Boolean   @default(false)
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  expenses    Expense[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+  @@map("categories")
+}
+
+model Expense {
+  id          String        @id @default(cuid())
+  householdId String
+  payerId     String
+  amount      Float
+  description String
+  date        DateTime
+  categoryId  String
+  splitMethod String
+  splitConfig String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  payer       User          @relation("ExpensePayer", fields: [payerId], references: [id])
+  category    Category      @relation(fields: [categoryId], references: [id])
+  splits      ExpenseSplit[]
+
+  @@index([householdId])
+  @@index([date])
+  @@index([categoryId])
+  @@index([payerId])
+  @@map("expenses")
+}
+
+model ExpenseSplit {
+  id         String  @id @default(cuid())
+  expenseId  String
+  userId     String
+  amountOwed Float
+  settled    Boolean @default(false)
+  expense    Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([expenseId])
+  @@index([userId])
+  @@map("expense_splits")
 }

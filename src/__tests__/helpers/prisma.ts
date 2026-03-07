@@ -1,10 +1,13 @@
 import { PrismaClient } from '@prisma/client'
 import { execSync } from 'child_process'
+import { existsSync, mkdirSync, unlinkSync } from 'fs'
 import path from 'path'
 
 let testPrisma: PrismaClient
 
-const TEST_DB_URL = `file:${path.join(process.cwd(), 'prisma', 'test.db')}`
+const TEST_DB_URL = 'file:./prisma/test.db'
+const TEST_DB_PATH = path.join(process.cwd(), 'prisma', 'test.db')
+const TEST_CACHE_PATH = path.join(process.cwd(), '.cache')
 
 export function getTestPrisma(): PrismaClient {
   if (!testPrisma) {
@@ -16,11 +19,17 @@ export function getTestPrisma(): PrismaClient {
 }
 
 export async function resetTestDatabase(): Promise<void> {
-  execSync('npx prisma db push --force-reset --accept-data-loss', {
+  if (existsSync(TEST_DB_PATH)) {
+    unlinkSync(TEST_DB_PATH)
+  }
+  mkdirSync(TEST_CACHE_PATH, { recursive: true })
+
+  execSync('npx prisma db push --skip-generate', {
     env: {
       ...process.env,
       DATABASE_URL: TEST_DB_URL,
-      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'yes',
+      XDG_CACHE_HOME: TEST_CACHE_PATH,
+      HOME: process.cwd(),
     },
     stdio: 'pipe',
   })
