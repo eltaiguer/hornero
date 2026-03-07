@@ -26,7 +26,8 @@ cp .env.example .env.local
 
 Then make sure:
 
-- `DATABASE_URL` points to your local SQLite DB
+- `DATABASE_URL` points to your Supabase pooler URL (`:6543`)
+- `DIRECT_URL` points to your Supabase direct URL (`:5432`)
 - `AUTH_SECRET` is set (required for NextAuth in production and recommended in dev)
 
 You can generate a secret with:
@@ -51,5 +52,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Set these env vars in Vercel (Production + Preview):
+
+- `DATABASE_URL` (Supabase pooler URL)
+- `DIRECT_URL` (Supabase direct URL)
+- `AUTH_SECRET`
+- `CRON_SECRET` (only if you use `/api/cron/recurring`)
+
+Use this build command:
+
+```bash
+npx prisma migrate deploy && next build
+```
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
