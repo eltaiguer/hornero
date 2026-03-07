@@ -45,6 +45,20 @@ export async function getInviteByToken(token: string) {
   })
 }
 
+export async function getPendingInvitesByEmail(email: string) {
+  return prisma.householdInvite.findMany({
+    where: {
+      email,
+      status: 'pending',
+      expiresAt: { gte: new Date() },
+    },
+    include: {
+      household: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+}
+
 export async function acceptInvite(inviteId: string, userId: string) {
   const invite = await prisma.householdInvite.findUnique({
     where: { id: inviteId },
@@ -76,4 +90,17 @@ export async function acceptInvite(inviteId: string, userId: string) {
       },
     })
   })
+}
+
+export async function acceptInviteByToken(token: string, userId: string, userEmail: string) {
+  const invite = await getInviteByToken(token)
+  if (!invite) {
+    throw new Error('Invite not found')
+  }
+
+  if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
+    throw new Error('This invite is for a different email')
+  }
+
+  return acceptInvite(invite.id, userId)
 }

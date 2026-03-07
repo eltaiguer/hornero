@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createInvite, acceptInvite, getInviteByToken } from '../invite.service'
+import {
+  createInvite,
+  acceptInvite,
+  acceptInviteByToken,
+  getInviteByToken,
+  getPendingInvitesByEmail,
+} from '../invite.service'
 import { prisma } from '@/lib/prisma'
 
 vi.mock('@/lib/prisma', () => ({
@@ -10,6 +16,7 @@ vi.mock('@/lib/prisma', () => ({
     householdInvite: {
       create: vi.fn(),
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       update: vi.fn(),
     },
     householdMember: {
@@ -137,6 +144,74 @@ describe('InviteService', () => {
       vi.mocked(prisma.householdInvite.findUnique).mockResolvedValue(acceptedInvite as any)
 
       await expect(acceptInvite('inv-1', 'user-new')).rejects.toThrow('already')
+    })
+  })
+
+  describe('getPendingInvitesByEmail', () => {
+    it('returns only pending, non-expired invites for email', async () => {
+      vi.mocked(prisma.householdInvite.findMany).mockResolvedValue([
+        { id: 'inv-1', email: 'u@test.com', status: 'pending' },
+      ] as any)
+
+      const result = await getPendingInvitesByEmail('u@test.com')
+      expect(result).toHaveLength(1)
+      expect(prisma.householdInvite.findMany).toHaveBeenCalledWith({
+        where: {
+          email: 'u@test.com',
+          status: 'pending',
+          expiresAt: { gte: expect.any(Date) },
+        },
+        include: {
+          household: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    })
+  })
+
+  describe('acceptInviteByToken', () => {
+    it('accepts invite by token for matching user email', async () => {
+      vi.mocked(prisma.householdInvite.findUnique).mockResolvedValue({
+        id: 'inv-1',
+        token: 'tok-1',
+        email: 'u@test.com',
+        status: 'pending',
+        householdId: 'hh-1',
+        expiresAt: new Date(Date.now() + 86400000),
+      } as any)
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => {
+        const tx = {
+          householdInvite: {
+            update: vi.fn().mockResolvedValue({ id: 'inv-1', status: 'accepted' }),
+          },
+          householdMember: {
+            create: vi.fn().mockResolvedValue({
+              householdId: 'hh-1',
+              userId: 'user-1',
+              role: 'member',
+            }),
+          },
+        }
+        return fn(tx)
+      })
+
+      const result = await acceptInviteByToken('tok-1', 'user-1', 'u@test.com')
+      expect(result.householdId).toBe('hh-1')
+    })
+
+    it('rejects token acceptance when invite email does not match user email', async () => {
+      vi.mocked(prisma.householdInvite.findUnique).mockResolvedValue({
+        id: 'inv-1',
+        token: 'tok-1',
+        email: 'other@test.com',
+        status: 'pending',
+        householdId: 'hh-1',
+        expiresAt: new Date(Date.now() + 86400000),
+      } as any)
+
+      await expect(acceptInviteByToken('tok-1', 'user-1', 'u@test.com')).rejects.toThrow(
+        'This invite is for a different email'
+      )
     })
   })
 })
