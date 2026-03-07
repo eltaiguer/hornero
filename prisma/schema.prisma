@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth.js required models ───
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+
+  createdHouseholds Household[]       @relation("HouseholdCreator")
+  memberships       HouseholdMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── Domain models ───
+
+model Household {
+  id                 String   @id @default(cuid())
+  name               String
+  currency           String   @default("USD")
+  defaultSplitMethod String   @default("equal")
+  createdById        String
+
+  createdBy User              @relation("HouseholdCreator", fields: [createdById], references: [id])
+  members   HouseholdMember[]
+  invites   HouseholdInvite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("households")
+}
+
+model HouseholdMember {
+  id          String  @id @default(cuid())
+  householdId String
+  userId      String
+  role        String  @default("member")
+  salary      Float?
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([householdId, userId])
+  @@map("household_members")
+}
+
+model HouseholdInvite {
+  id          String   @id @default(cuid())
+  householdId String
+  email       String
+  token       String   @unique @default(cuid())
+  status      String   @default("pending")
+  expiresAt   DateTime
+  invitedById String
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("household_invites")
+}
