@@ -5,6 +5,7 @@ import { getUserHouseholds } from '@/services/household.service'
 import { CreateHouseholdForm } from '@/components/household/create-household-form'
 import { createHousehold } from '@/services/household.service'
 import type { CreateHouseholdInput } from '@/lib/validations/household'
+import { HouseholdNavLinks } from '@/components/household/household-nav-links'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -37,6 +38,9 @@ export default async function DashboardPage() {
                   {h.name}
                 </Link>
                 <span className="ml-2 text-sm text-gray-500">{h.currency}</span>
+                <div className="mt-3">
+                  <HouseholdNavLinks householdId={h.id} />
+                </div>
               </li>
             ))}
           </ul>

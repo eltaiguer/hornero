@@ -5,6 +5,7 @@ import { isHouseholdOwner, updateMemberSalary } from '@/services/member.service'
 import { createInvite } from '@/services/invite.service'
 import { SalaryInput } from '@/components/member/salary-input'
 import { InviteMemberForm } from '@/components/household/invite-member-form'
+import { HouseholdNavLinks } from '@/components/household/household-nav-links'
 
 interface Props {
   searchParams: Promise<{ id?: string }>
@@ -85,6 +86,16 @@ export default async function MembersPage({ searchParams }: Props) {
           </div>
         </section>
       )}
+
+      <section className="mt-6">
+        <h2 className="text-lg font-semibold">Next steps</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Continue by adding expenses, recurring items, and budgets for this household.
+        </p>
+        <div className="mt-3">
+          <HouseholdNavLinks householdId={id} />
+        </div>
+      </section>
     </main>
   )
 }
