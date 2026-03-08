@@ -152,6 +152,13 @@ export async function isHouseholdOwner(
   return role === 'owner'
 }
 
+export async function getSalaryHistory(householdId: string, userId: string) {
+  return prisma.memberSalaryHistory.findMany({
+    where: { householdId, userId },
+    orderBy: { effectiveFrom: 'desc' },
+  })
+}
+
 export async function getHouseholdMembers(householdId: string) {
   return prisma.householdMember.findMany({
     where: { householdId },

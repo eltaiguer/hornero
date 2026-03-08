@@ -1,9 +1,17 @@
 import { redirect, notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { getHouseholdById, updateHouseholdSettings } from '@/services/household.service'
-import { isHouseholdOwner } from '@/services/member.service'
+import { isHouseholdOwner, getHouseholdMembers, getSalaryHistory } from '@/services/member.service'
+import { SUPPORTED_CURRENCIES, SPLIT_METHODS } from '@/lib/validations/household'
 import type { UpdateHouseholdSettingsInput } from '@/lib/validations/household'
 import { PushNotificationsToggle } from '@/components/settings/push-notifications-toggle'
+import { SalaryHistorySection } from '@/components/settings/salary-history-section'
+
+const SPLIT_METHOD_LABELS: Record<string, string> = {
+  equal: 'Equal',
+  proportional: 'By Income',
+  custom: 'Custom',
+}
 
 interface Props {
   searchParams: Promise<{ id?: string; householdId?: string }>
@@ -35,10 +43,25 @@ export default async function SettingsPage({ searchParams }: Props) {
     notFound()
   }
 
-  const isOwner = await isHouseholdOwner(householdIdValue, session.user.id)
+  const [isOwner, members] = await Promise.all([
+    isHouseholdOwner(householdIdValue, session.user.id),
+    getHouseholdMembers(householdIdValue),
+  ])
   if (!isOwner) {
     redirect('/dashboard')
   }
+
+  const membersWithHistory = await Promise.all(
+    members.map(async (member) => {
+      const history = await getSalaryHistory(householdIdValue, member.userId)
+      return {
+        userId: member.userId,
+        name: member.user.name ?? member.user.email ?? 'Unknown',
+        currentSalary: member.salary,
+        history,
+      }
+    })
+  )
 
   async function handleUpdate(formData: FormData) {
     'use server'
@@ -46,6 +69,8 @@ export default async function SettingsPage({ searchParams }: Props) {
     requireUserId(s?.user?.id)
     const input: UpdateHouseholdSettingsInput = {
       name: formData.get('name') as string,
+      currency: formData.get('currency') as typeof SUPPORTED_CURRENCIES[number],
+      defaultSplitMethod: formData.get('defaultSplitMethod') as typeof SPLIT_METHODS[number],
     }
     await updateHouseholdSettings(householdIdValue, input)
     redirect(`/household/settings?householdId=${householdIdValue}`)
@@ -70,13 +95,42 @@ export default async function SettingsPage({ searchParams }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Currency</label>
-          <p className="mt-1 text-sm text-gray-500">{household.currency}</p>
+          <label htmlFor="currency" className="block text-sm font-medium">
+            Currency
+          </label>
+          <select
+            id="currency"
+            name="currency"
+            defaultValue={household.currency}
+            className="mt-1 block w-full rounded-md border px-3 py-2"
+          >
+            {SUPPORTED_CURRENCIES.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-amber-600">
+            Changing currency will not convert existing amounts.
+          </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Split method</label>
-          <p className="mt-1 text-sm text-gray-500">{household.defaultSplitMethod}</p>
+          <label htmlFor="defaultSplitMethod" className="block text-sm font-medium">
+            Default split method
+          </label>
+          <select
+            id="defaultSplitMethod"
+            name="defaultSplitMethod"
+            defaultValue={household.defaultSplitMethod}
+            className="mt-1 block w-full rounded-md border px-3 py-2"
+          >
+            {SPLIT_METHODS.map((method) => (
+              <option key={method} value={method}>
+                {SPLIT_METHOD_LABELS[method] ?? method}
+              </option>
+            ))}
+          </select>
         </div>
 
         <button
@@ -89,6 +143,10 @@ export default async function SettingsPage({ searchParams }: Props) {
 
       <div className="mt-6">
         <PushNotificationsToggle householdId={householdIdValue} />
+      </div>
+
+      <div className="mt-6">
+        <SalaryHistorySection members={membersWithHistory} />
       </div>
     </main>
   )
