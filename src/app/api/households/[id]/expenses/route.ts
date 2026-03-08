@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { jsonResponse } from '@/lib/api-utils'
+import type { CreateExpenseInput } from '@/lib/validations/expense'
 import { createExpense, getExpenses } from '@/services/expense.service'
 import { uploadReceipt } from '@/services/receipt.service'
 import { getMemberRole } from '@/services/member.service'
@@ -70,7 +71,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const contentType = request.headers?.get?.('content-type') ?? ''
 
-    let payload: unknown
+    let payload: CreateExpenseInput
     let receiptFile: (Blob & { name?: string }) | undefined
 
     if (contentType.includes('multipart/form-data')) {
@@ -78,10 +79,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       payload = parseExpensePayloadFromFormData(formData)
       receiptFile = parseReceiptFile(formData) ?? undefined
     } else {
-      payload = await request.json()
+      payload = (await request.json()) as CreateExpenseInput
     }
 
-    const expense = await createExpense(id, payload as any, session.user.id)
+    const expense = await createExpense(id, payload, session.user.id)
 
     if (receiptFile) {
       const withReceipt = await uploadReceipt(expense.id, receiptFile)
@@ -95,7 +96,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 }
 
-function parseExpensePayloadFromFormData(formData: FormData) {
+function parseExpensePayloadFromFormData(formData: FormData): CreateExpenseInput {
   const getString = (key: string) => {
     const value = formData.get(key)
     return typeof value === 'string' ? value : ''
@@ -119,7 +120,7 @@ function parseExpensePayloadFromFormData(formData: FormData) {
     payload.notes = notes
   }
 
-  return payload
+  return payload as CreateExpenseInput
 }
 
 function parseReceiptFile(formData: FormData) {
