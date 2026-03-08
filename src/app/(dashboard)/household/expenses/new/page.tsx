@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { getUserHouseholds } from '@/services/household.service'
 import { getCategories } from '@/services/category.service'
-import { createExpense } from '@/services/expense.service'
-import { ExpenseForm } from '@/components/expense/expense-form'
-import type { CreateExpenseInput } from '@/lib/validations/expense'
+import { getHouseholdMembers } from '@/services/member.service'
+import { NewExpenseFormClient } from '@/components/expense/new-expense-form-client'
 
 export default async function NewExpensePage({
   searchParams,
@@ -24,20 +24,28 @@ export default async function NewExpensePage({
     redirect('/dashboard')
   }
 
-  const categories = await getCategories(householdId)
-
-  async function handleSubmit(data: CreateExpenseInput) {
-    'use server'
-    const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await createExpense(householdId as string, data, s.user.id)
-    redirect(`/household/expenses?householdId=${householdId}`)
-  }
+  const [categories, members] = await Promise.all([
+    getCategories(householdId),
+    getHouseholdMembers(householdId),
+  ])
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <h1 className="text-2xl font-bold">New expense</h1>
-      <ExpenseForm categories={categories.map((c) => ({ id: c.id, name: c.name }))} onSubmit={handleSubmit} />
+    <main className="mx-auto max-w-2xl p-6 pb-20 md:pb-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <Link href={`/household/expenses?householdId=${householdId}`} className="text-sm text-blue-600 font-medium hover:underline">
+          ← Back
+        </Link>
+        <h1 className="text-2xl font-bold">Add Expense</h1>
+      </div>
+      <NewExpenseFormClient
+        householdId={householdId}
+        categories={categories.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, isDefault: c.isDefault }))}
+        members={members.map((member) => ({
+          id: member.userId,
+          name: member.user.name ?? member.user.email ?? 'Unknown',
+          salary: member.salary,
+        }))}
+      />
     </main>
   )
 }

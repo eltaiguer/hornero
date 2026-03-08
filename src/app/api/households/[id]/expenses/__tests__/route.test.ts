@@ -6,9 +6,13 @@ vi.mock('@/services/expense.service', () => ({
   getExpenses: vi.fn(),
   createExpense: vi.fn(),
 }))
+vi.mock('@/services/receipt.service', () => ({
+  uploadReceipt: vi.fn(),
+}))
 
 import { auth } from '@/lib/auth'
 import { createExpense, getExpenses } from '@/services/expense.service'
+import { uploadReceipt } from '@/services/receipt.service'
 import { getMemberRole } from '@/services/member.service'
 import { GET, POST } from '../route'
 
@@ -72,5 +76,57 @@ describe('POST /api/households/[id]/expenses', () => {
       expect.objectContaining({ amount: 100 }),
       'user-1'
     )
+  })
+
+  it('creates expense with multipart payload and attaches receipt', async () => {
+    vi.mocked(auth).mockResolvedValue(session as any)
+    vi.mocked(getMemberRole).mockResolvedValue('member')
+    vi.mocked(createExpense).mockResolvedValue({ id: 'exp-1' } as any)
+    vi.mocked(uploadReceipt).mockResolvedValue({ id: 'exp-1', receiptUrl: '/uploads/r.jpg' } as any)
+
+    const file = new File(['receipt'], 'receipt.jpg', { type: 'image/jpeg' })
+    const formData = new FormData()
+    formData.set('amount', '100')
+    formData.set('description', 'Groceries')
+    formData.set('date', '2026-03-01T00:00:00.000Z')
+    formData.set('categoryId', 'cat-1')
+    formData.set('splitMethod', 'equal')
+    formData.set('file', file)
+
+    const req = new Request('http://localhost/api/households/hh-1/expenses', {
+      method: 'POST',
+      body: formData,
+    })
+    const res = await POST(req, routeContext)
+
+    expect(res.status).toBe(201)
+    expect(createExpense).toHaveBeenCalledWith(
+      'hh-1',
+      expect.objectContaining({ amount: 100, description: 'Groceries' }),
+      'user-1'
+    )
+    expect(uploadReceipt).toHaveBeenCalledTimes(1)
+    const [uploadedExpenseId, uploadedFile] = vi.mocked(uploadReceipt).mock.calls[0]!
+    expect(uploadedExpenseId).toBe('exp-1')
+    expect(uploadedFile).toBeTruthy()
+    expect(typeof (uploadedFile as Blob).arrayBuffer).toBe('function')
+  })
+
+  it('returns 400 when multipart payload is invalid', async () => {
+    vi.mocked(auth).mockResolvedValue(session as any)
+    vi.mocked(getMemberRole).mockResolvedValue('member')
+    vi.mocked(createExpense).mockRejectedValue(new Error('Description is required'))
+
+    const formData = new FormData()
+    formData.set('amount', '100')
+    formData.set('splitMethod', 'equal')
+    const req = new Request('http://localhost/api/households/hh-1/expenses', {
+      method: 'POST',
+      body: formData,
+    })
+
+    const res = await POST(req, routeContext)
+
+    expect(res.status).toBe(400)
   })
 })

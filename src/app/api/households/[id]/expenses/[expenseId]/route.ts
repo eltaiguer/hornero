@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { jsonResponse } from '@/lib/api-utils'
 import { deleteExpense, getExpenseById, updateExpense } from '@/services/expense.service'
-import { isHouseholdOwner } from '@/services/member.service'
+import { getMemberRole, isHouseholdOwner } from '@/services/member.service'
 
 type RouteContext = { params: Promise<{ id: string; expenseId: string }> }
 
@@ -26,6 +26,11 @@ export async function GET(_request: Request, { params }: RouteContext) {
   }
 
   const { id, expenseId } = await params
+  const role = await getMemberRole(id, session.user.id)
+  if (!role) {
+    return jsonResponse({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const expense = await getExpenseById(expenseId)
 
   if (!expense || expense.householdId !== id) {

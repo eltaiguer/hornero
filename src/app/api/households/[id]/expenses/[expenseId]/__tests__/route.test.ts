@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
-vi.mock('@/services/member.service', () => ({ isHouseholdOwner: vi.fn() }))
+vi.mock('@/services/member.service', () => ({
+  getMemberRole: vi.fn(),
+  isHouseholdOwner: vi.fn(),
+}))
 vi.mock('@/services/expense.service', () => ({
   getExpenseById: vi.fn(),
   updateExpense: vi.fn(),
@@ -10,7 +13,7 @@ vi.mock('@/services/expense.service', () => ({
 
 import { auth } from '@/lib/auth'
 import { deleteExpense, getExpenseById, updateExpense } from '@/services/expense.service'
-import { isHouseholdOwner } from '@/services/member.service'
+import { getMemberRole, isHouseholdOwner } from '@/services/member.service'
 import { DELETE, GET, PATCH } from '../route'
 
 const routeContext = {
@@ -24,8 +27,18 @@ const session = {
 describe('GET /api/households/[id]/expenses/[expenseId]', () => {
   beforeEach(() => vi.clearAllMocks())
 
+  it('returns 403 for non-members', async () => {
+    vi.mocked(auth).mockResolvedValue(session as any)
+    vi.mocked(getMemberRole).mockResolvedValue(null)
+
+    const res = await GET({} as any, routeContext)
+
+    expect(res.status).toBe(403)
+  })
+
   it('returns 404 for missing expense', async () => {
     vi.mocked(auth).mockResolvedValue(session as any)
+    vi.mocked(getMemberRole).mockResolvedValue('member')
     vi.mocked(getExpenseById).mockResolvedValue(null)
 
     const res = await GET({} as any, routeContext)

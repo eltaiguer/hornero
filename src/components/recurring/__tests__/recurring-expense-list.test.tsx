@@ -22,4 +22,11 @@ describe('RecurringExpenseList', () => {
     expect(screen.getByText(/rent/i)).toBeInTheDocument()
     expect(screen.getByText(/monthly/i)).toBeInTheDocument()
   })
+
+  it('renders empty-state messaging', () => {
+    render(<RecurringExpenseList items={[]} />)
+
+    expect(screen.getByText(/no recurring expenses/i)).toBeInTheDocument()
+    expect(screen.getByText(/add a recurring expense/i)).toBeInTheDocument()
+  })
 })
