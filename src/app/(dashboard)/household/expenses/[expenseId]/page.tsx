@@ -9,6 +9,14 @@ import { ExpenseForm } from '@/components/expense/expense-form'
 import { ReceiptLightboxImage } from '@/components/expense/receipt-lightbox-image'
 import type { CreateExpenseInput } from '@/lib/validations/expense'
 
+function requireUserId(value: string | null | undefined): string {
+  if (!value) {
+    throw new Error('Unauthorized')
+  }
+
+  return value
+}
+
 export default async function ExpenseDetailPage({
   params,
 }: {
@@ -26,47 +34,51 @@ export default async function ExpenseDetailPage({
     notFound()
   }
 
-  const role = await getMemberRole(expense.householdId, session.user.id)
+  const expenseIdValue = expense.id
+  const householdId = expense.householdId
+  const payerId = expense.payerId
+
+  const role = await getMemberRole(householdId, session.user.id)
   if (!role) {
     redirect('/dashboard')
   }
 
   const [categories, members] = await Promise.all([
-    getCategories(expense.householdId),
-    getHouseholdMembers(expense.householdId),
+    getCategories(householdId),
+    getHouseholdMembers(householdId),
   ])
 
-  const owner = await isHouseholdOwner(expense.householdId, session.user.id)
-  const canEdit = owner || expense.payerId === session.user.id
+  const owner = await isHouseholdOwner(householdId, session.user.id)
+  const canEdit = owner || payerId === session.user.id
 
   async function handleUpdate(data: CreateExpenseInput) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    const isOwner = await isHouseholdOwner(expense.householdId, s.user.id)
-    if (!isOwner && expense.payerId !== s.user.id) {
+    const userId = requireUserId(s?.user?.id)
+    const isOwner = await isHouseholdOwner(householdId, userId)
+    if (!isOwner && payerId !== userId) {
       throw new Error('Forbidden')
     }
-    await updateExpense(expense.id, data)
-    redirect(`/household/expenses/${expense.id}?householdId=${expense.householdId}`)
+    await updateExpense(expenseIdValue, data)
+    redirect(`/household/expenses/${expenseIdValue}?householdId=${householdId}`)
   }
 
   async function handleDelete() {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    const isOwner = await isHouseholdOwner(expense.householdId, s.user.id)
-    if (!isOwner && expense.payerId !== s.user.id) {
+    const userId = requireUserId(s?.user?.id)
+    const isOwner = await isHouseholdOwner(householdId, userId)
+    if (!isOwner && payerId !== userId) {
       throw new Error('Forbidden')
     }
-    await deleteExpense(expense.id)
-    redirect(`/household/expenses?householdId=${expense.householdId}`)
+    await deleteExpense(expenseIdValue)
+    redirect(`/household/expenses?householdId=${householdId}`)
   }
 
   return (
     <main className="mx-auto max-w-2xl p-6 pb-20 md:pb-6 space-y-4">
       <div className="flex items-center justify-between">
-        <Link href={`/household/expenses?householdId=${expense.householdId}`} className="text-sm text-blue-600 font-medium hover:underline">
+        <Link href={`/household/expenses?householdId=${householdId}`} className="text-sm text-blue-600 font-medium hover:underline">
           ← Back
         </Link>
         <h1 className="text-2xl font-bold">Expense Detail</h1>

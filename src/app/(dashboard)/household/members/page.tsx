@@ -11,6 +11,14 @@ interface Props {
   searchParams: Promise<{ id?: string; householdId?: string }>
 }
 
+function requireUserId(value: string | null | undefined): string {
+  if (!value) {
+    throw new Error('Unauthorized')
+  }
+
+  return value
+}
+
 export default async function MembersPage({ searchParams }: Props) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -22,8 +30,9 @@ export default async function MembersPage({ searchParams }: Props) {
   if (!householdId) {
     redirect('/dashboard')
   }
+  const householdIdValue: string = householdId
 
-  const household = await getHouseholdById(householdId)
+  const household = await getHouseholdById(householdIdValue)
   if (!household) {
     notFound()
   }
@@ -33,20 +42,20 @@ export default async function MembersPage({ searchParams }: Props) {
     redirect('/dashboard')
   }
 
-  const isOwner = await isHouseholdOwner(householdId, session.user.id)
+  const isOwner = await isHouseholdOwner(householdIdValue, session.user.id)
 
   async function handleSalaryUpdate(salary: number | null, effectiveFrom: string) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await updateMemberSalary(householdId, s.user.id, salary, effectiveFrom)
+    const userId = requireUserId(s?.user?.id)
+    await updateMemberSalary(householdIdValue, userId, salary, effectiveFrom)
   }
 
   async function handleInvite(email: string) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await createInvite(householdId, email, s.user.id)
+    const userId = requireUserId(s?.user?.id)
+    await createInvite(householdIdValue, email, userId)
   }
 
   return (
@@ -94,7 +103,7 @@ export default async function MembersPage({ searchParams }: Props) {
           Continue by adding expenses, recurring items, and budgets for this household.
         </p>
         <div className="mt-3">
-          <HouseholdNavLinks householdId={householdId} />
+          <HouseholdNavLinks householdId={householdIdValue} />
         </div>
       </section>
     </main>

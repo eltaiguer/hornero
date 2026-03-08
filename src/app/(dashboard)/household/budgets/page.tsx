@@ -9,6 +9,14 @@ import { BudgetForm } from '@/components/budget/budget-form'
 import { BudgetAlert } from '@/components/budget/budget-alert'
 import type { CreateBudgetInput } from '@/lib/validations/budget'
 
+function requireUserId(value: string | null | undefined): string {
+  if (!value) {
+    throw new Error('Unauthorized')
+  }
+
+  return value
+}
+
 export default async function BudgetsPage({
   searchParams,
 }: {
@@ -26,8 +34,9 @@ export default async function BudgetsPage({
   if (!householdId) {
     redirect('/dashboard')
   }
+  const householdIdValue: string = householdId
 
-  const owner = await isHouseholdOwner(householdId, session.user.id)
+  const owner = await isHouseholdOwner(householdIdValue, session.user.id)
 
   const month = Number(params.month ?? new Date().getUTCMonth() + 1)
   const year = Number(params.year ?? new Date().getUTCFullYear())
@@ -36,30 +45,30 @@ export default async function BudgetsPage({
   const editBudgetId = params.editBudgetId
 
   const [categories, progress, alerts, budgets] = await Promise.all([
-    getCategories(householdId),
-    getBudgetProgress(householdId, month, year),
-    checkBudgetAlerts(householdId, month, year),
-    getBudgets(householdId, month, year),
+    getCategories(householdIdValue),
+    getBudgetProgress(householdIdValue, month, year),
+    checkBudgetAlerts(householdIdValue, month, year),
+    getBudgets(householdIdValue, month, year),
   ])
 
   async function handleSetBudget(input: CreateBudgetInput) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    const canManage = await isHouseholdOwner(householdId as string, s.user.id)
+    const userId = requireUserId(s?.user?.id)
+    const canManage = await isHouseholdOwner(householdIdValue, userId)
     if (!canManage) throw new Error('Forbidden')
-    await setBudget(householdId as string, input)
-    redirect(`/household/budgets?householdId=${householdId}&month=${input.month}&year=${input.year}`)
+    await setBudget(householdIdValue, input)
+    redirect(`/household/budgets?householdId=${householdIdValue}&month=${input.month}&year=${input.year}`)
   }
 
   async function handleDeleteBudget(budgetId: string) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    const canManage = await isHouseholdOwner(householdId as string, s.user.id)
+    const userId = requireUserId(s?.user?.id)
+    const canManage = await isHouseholdOwner(householdIdValue, userId)
     if (!canManage) throw new Error('Forbidden')
     await deleteBudget(budgetId)
-    redirect(`/household/budgets?householdId=${householdId}&month=${month}&year=${year}`)
+    redirect(`/household/budgets?householdId=${householdIdValue}&month=${month}&year=${year}`)
   }
 
   const editingBudget = editBudgetId
@@ -74,7 +83,7 @@ export default async function BudgetsPage({
 
       <BudgetOverview
         items={progress}
-        householdId={householdId}
+        householdId={householdIdValue}
         month={month}
         year={year}
       />
@@ -92,10 +101,10 @@ export default async function BudgetsPage({
               categoryId: editingBudget.categoryId,
               amount: editingBudget.amount,
             } : undefined}
-            cancelEditHref={`/household/budgets?householdId=${householdId}&month=${month}&year=${year}`}
+            cancelEditHref={`/household/budgets?householdId=${householdIdValue}&month=${month}&year=${year}`}
             onDelete={handleDeleteBudget}
-            previousMonthHref={`/household/budgets?householdId=${householdId}&month=${previous.getMonth() + 1}&year=${previous.getFullYear()}`}
-            nextMonthHref={`/household/budgets?householdId=${householdId}&month=${next.getMonth() + 1}&year=${next.getFullYear()}`}
+            previousMonthHref={`/household/budgets?householdId=${householdIdValue}&month=${previous.getMonth() + 1}&year=${previous.getFullYear()}`}
+            nextMonthHref={`/household/budgets?householdId=${householdIdValue}&month=${next.getMonth() + 1}&year=${next.getFullYear()}`}
             onSubmit={handleSetBudget}
           />
         ) : (

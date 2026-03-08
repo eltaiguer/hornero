@@ -9,6 +9,14 @@ import { SimplifiedDebts } from '@/components/balance/simplified-debts'
 import { SettlementHistory } from '@/components/balance/settlement-history'
 import type { CreateSettlementInput } from '@/lib/validations/settlement'
 
+function requireUserId(value: string | null | undefined): string {
+  if (!value) {
+    throw new Error('Unauthorized')
+  }
+
+  return value
+}
+
 export default async function BalancesPage({
   searchParams,
 }: {
@@ -26,11 +34,12 @@ export default async function BalancesPage({
   if (!householdId) {
     redirect('/dashboard')
   }
+  const householdIdValue: string = householdId
 
   const [balances, settlements, members] = await Promise.all([
-    calculateBalances(householdId),
-    getSettlements(householdId),
-    getHouseholdMembers(householdId),
+    calculateBalances(householdIdValue),
+    getSettlements(householdIdValue),
+    getHouseholdMembers(householdIdValue),
   ])
 
   const maxAbsBalance = Math.max(...balances.map((item) => Math.abs(item.balance)), 1)
@@ -44,9 +53,9 @@ export default async function BalancesPage({
   async function handleSettle(input: CreateSettlementInput) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await createSettlement(householdId as string, s.user.id, input)
-    redirect(`/household/balances?householdId=${householdId}`)
+    const userId = requireUserId(s?.user?.id)
+    await createSettlement(householdIdValue, userId, input)
+    redirect(`/household/balances?householdId=${householdIdValue}`)
   }
 
   const allSettled = balances.every((item) => Math.abs(item.balance) < 0.005)

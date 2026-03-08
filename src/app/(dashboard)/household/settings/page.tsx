@@ -9,6 +9,14 @@ interface Props {
   searchParams: Promise<{ id?: string; householdId?: string }>
 }
 
+function requireUserId(value: string | null | undefined): string {
+  if (!value) {
+    throw new Error('Unauthorized')
+  }
+
+  return value
+}
+
 export default async function SettingsPage({ searchParams }: Props) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -20,13 +28,14 @@ export default async function SettingsPage({ searchParams }: Props) {
   if (!householdId) {
     redirect('/dashboard')
   }
+  const householdIdValue: string = householdId
 
-  const household = await getHouseholdById(householdId)
+  const household = await getHouseholdById(householdIdValue)
   if (!household) {
     notFound()
   }
 
-  const isOwner = await isHouseholdOwner(householdId, session.user.id)
+  const isOwner = await isHouseholdOwner(householdIdValue, session.user.id)
   if (!isOwner) {
     redirect('/dashboard')
   }
@@ -34,12 +43,12 @@ export default async function SettingsPage({ searchParams }: Props) {
   async function handleUpdate(formData: FormData) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
+    requireUserId(s?.user?.id)
     const input: UpdateHouseholdSettingsInput = {
       name: formData.get('name') as string,
     }
-    await updateHouseholdSettings(householdId, input)
-    redirect(`/household/settings?householdId=${householdId}`)
+    await updateHouseholdSettings(householdIdValue, input)
+    redirect(`/household/settings?householdId=${householdIdValue}`)
   }
 
   return (
@@ -79,7 +88,7 @@ export default async function SettingsPage({ searchParams }: Props) {
       </form>
 
       <div className="mt-6">
-        <PushNotificationsToggle householdId={householdId} />
+        <PushNotificationsToggle householdId={householdIdValue} />
       </div>
     </main>
   )

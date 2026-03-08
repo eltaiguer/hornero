@@ -1,6 +1,8 @@
 import { MobileBottomNav } from '@/components/navigation/mobile-bottom-nav'
 import { QuickAddFab } from '@/components/navigation/quick-add-fab'
 
+export const dynamic = 'force-dynamic'
+
 export default function DashboardLayout({
   children,
 }: {

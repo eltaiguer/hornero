@@ -6,6 +6,14 @@ import { isHouseholdOwner } from '@/services/member.service'
 import { CategoryManager } from '@/components/category/category-manager'
 import type { CreateCategoryInput } from '@/lib/validations/category'
 
+function requireUserId(value: string | null | undefined): string {
+  if (!value) {
+    throw new Error('Unauthorized')
+  }
+
+  return value
+}
+
 export default async function CategoriesPage({
   searchParams,
 }: {
@@ -23,36 +31,37 @@ export default async function CategoriesPage({
   if (!householdId) {
     redirect('/dashboard')
   }
+  const householdIdValue: string = householdId
 
-  const owner = await isHouseholdOwner(householdId, session.user.id)
+  const owner = await isHouseholdOwner(householdIdValue, session.user.id)
   if (!owner) {
     redirect('/dashboard')
   }
 
-  const categories = await getCategories(householdId)
+  const categories = await getCategories(householdIdValue)
 
   async function handleCreate(input: CreateCategoryInput) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await createCategory(householdId as string, input)
-    redirect(`/household/categories?householdId=${householdId}`)
+    requireUserId(s?.user?.id)
+    await createCategory(householdIdValue, input)
+    redirect(`/household/categories?householdId=${householdIdValue}`)
   }
 
   async function handleUpdate(categoryId: string, input: Partial<CreateCategoryInput>) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
+    requireUserId(s?.user?.id)
     await updateCategory(categoryId, input)
-    redirect(`/household/categories?householdId=${householdId}`)
+    redirect(`/household/categories?householdId=${householdIdValue}`)
   }
 
   async function handleDelete(categoryId: string) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
+    requireUserId(s?.user?.id)
     await deleteCategory(categoryId)
-    redirect(`/household/categories?householdId=${householdId}`)
+    redirect(`/household/categories?householdId=${householdIdValue}`)
   }
 
   return (

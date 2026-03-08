@@ -15,6 +15,14 @@ import { getCategories } from '@/services/category.service'
 import { RecurringExpenseForm } from '@/components/recurring/recurring-expense-form'
 import type { CreateRecurringExpenseInput } from '@/lib/validations/recurring'
 
+function requireUserId(value: string | null | undefined): string {
+  if (!value) {
+    throw new Error('Unauthorized')
+  }
+
+  return value
+}
+
 function formatFrequency(frequency: string) {
   if (frequency === 'daily') return 'Daily'
   if (frequency === 'weekly') return 'Weekly'
@@ -40,23 +48,24 @@ export default async function RecurringPage({
   if (!householdId) {
     redirect('/dashboard')
   }
+  const householdIdValue: string = householdId
 
   const [categories, recurring, members] = await Promise.all([
-    getCategories(householdId),
-    getRecurringExpenses(householdId),
-    getHouseholdMembers(householdId),
+    getCategories(householdIdValue),
+    getRecurringExpenses(householdIdValue),
+    getHouseholdMembers(householdIdValue),
   ])
 
   const editingRecurring = editId ? recurring.find((item) => item.id === editId) : undefined
 
   async function assertRecurringAccess(userId: string, recurringId: string) {
-    const role = await getMemberRole(householdId as string, userId)
+    const role = await getMemberRole(householdIdValue, userId)
     if (!role) {
       throw new Error('Forbidden')
     }
 
     const item = await prisma.recurringExpense.findFirst({
-      where: { id: recurringId, householdId: householdId as string },
+      where: { id: recurringId, householdId: householdIdValue },
       select: { id: true },
     })
     if (!item) {
@@ -67,47 +76,47 @@ export default async function RecurringPage({
   async function handleCreate(input: CreateRecurringExpenseInput) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    const role = await getMemberRole(householdId as string, s.user.id)
+    const userId = requireUserId(s?.user?.id)
+    const role = await getMemberRole(householdIdValue, userId)
     if (!role) throw new Error('Forbidden')
-    await createRecurringExpense(householdId as string, s.user.id, input)
-    redirect(`/household/recurring?householdId=${householdId}`)
+    await createRecurringExpense(householdIdValue, userId, input)
+    redirect(`/household/recurring?householdId=${householdIdValue}`)
   }
 
   async function handleUpdate(recurringId: string, input: CreateRecurringExpenseInput) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await assertRecurringAccess(s.user.id, recurringId)
+    const userId = requireUserId(s?.user?.id)
+    await assertRecurringAccess(userId, recurringId)
     await updateRecurringExpense(recurringId, input)
-    redirect(`/household/recurring?householdId=${householdId}`)
+    redirect(`/household/recurring?householdId=${householdIdValue}`)
   }
 
   async function handlePause(id: string) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await assertRecurringAccess(s.user.id, id)
+    const userId = requireUserId(s?.user?.id)
+    await assertRecurringAccess(userId, id)
     await updateRecurringExpense(id, { active: false })
-    redirect(`/household/recurring?householdId=${householdId}`)
+    redirect(`/household/recurring?householdId=${householdIdValue}`)
   }
 
   async function handleResume(id: string) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await assertRecurringAccess(s.user.id, id)
+    const userId = requireUserId(s?.user?.id)
+    await assertRecurringAccess(userId, id)
     await updateRecurringExpense(id, { active: true })
-    redirect(`/household/recurring?householdId=${householdId}`)
+    redirect(`/household/recurring?householdId=${householdIdValue}`)
   }
 
   async function handleDelete(id: string) {
     'use server'
     const s = await auth()
-    if (!s?.user?.id) throw new Error('Unauthorized')
-    await assertRecurringAccess(s.user.id, id)
+    const userId = requireUserId(s?.user?.id)
+    await assertRecurringAccess(userId, id)
     await deleteRecurringExpense(id)
-    redirect(`/household/recurring?householdId=${householdId}`)
+    redirect(`/household/recurring?householdId=${householdIdValue}`)
   }
 
   return (
@@ -136,7 +145,7 @@ export default async function RecurringPage({
               endDate: editingRecurring.endDate ?? undefined,
             }}
             submitLabel="Update Recurring Expense"
-            cancelHref={`/household/recurring?householdId=${householdId}`}
+            cancelHref={`/household/recurring?householdId=${householdIdValue}`}
             onSubmit={handleUpdate.bind(null, editingRecurring.id)}
           />
         ) : (
@@ -188,7 +197,7 @@ export default async function RecurringPage({
                   </form>
                 )}
                 <Link
-                  href={`/household/recurring?householdId=${householdId}&edit=${item.id}`}
+                  href={`/household/recurring?householdId=${householdIdValue}&edit=${item.id}`}
                   className="rounded p-1.5 hover:bg-blue-50 text-blue-600"
                   aria-label="Edit recurring expense"
                 >
