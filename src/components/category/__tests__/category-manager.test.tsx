@@ -6,12 +6,14 @@ import { CategoryManager } from '../category-manager'
 describe('CategoryManager', () => {
   it('adds a category through callback', async () => {
     const onCreate = vi.fn()
+    const onUpdate = vi.fn()
+    const onDelete = vi.fn()
     const user = userEvent.setup()
 
-    render(<CategoryManager categories={[]} onCreate={onCreate} />)
+    render(<CategoryManager categories={[]} onCreate={onCreate} onUpdate={onUpdate} onDelete={onDelete} />)
 
-    await user.type(screen.getByLabelText(/new category name/i), 'Pets')
-    await user.click(screen.getByRole('button', { name: /add category/i }))
+    await user.type(screen.getByLabelText(/^name$/i), 'Pets')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
 
     expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ name: 'Pets' }))
   })

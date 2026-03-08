@@ -32,9 +32,15 @@ vi.mock('@/lib/prisma', () => ({
 vi.mock('../member.service', () => ({
   getMembersWithEffectiveSalary: vi.fn(),
 }))
+vi.mock('../push.service', () => ({
+  notifyBudgetThresholds: vi.fn(),
+}))
 
 describe('RecurringService', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.clearAllMocks()
+  })
 
   it('creates recurring expense with next due date from start date', async () => {
     vi.mocked(prisma.category.findFirst).mockResolvedValue({ id: 'cat-1' } as any)
@@ -53,6 +59,11 @@ describe('RecurringService', () => {
   })
 
   it('updates recurring expense', async () => {
+    vi.mocked(prisma.recurringExpense.findUnique).mockResolvedValue({
+      id: 'r-1',
+      splitMethod: 'equal',
+      splitConfig: null,
+    } as any)
     vi.mocked(prisma.recurringExpense.update).mockResolvedValue({ id: 'r-1', active: false } as any)
 
     const result = await updateRecurringExpense('r-1', { active: false })
@@ -61,6 +72,11 @@ describe('RecurringService', () => {
   })
 
   it('pauses and resumes recurring expense', async () => {
+    vi.mocked(prisma.recurringExpense.findUnique).mockResolvedValue({
+      id: 'r-1',
+      splitMethod: 'equal',
+      splitConfig: null,
+    } as any)
     vi.mocked(prisma.recurringExpense.update).mockResolvedValue({ id: 'r-1', active: false } as any)
 
     await pauseRecurringExpense('r-1')
@@ -113,6 +129,7 @@ describe('RecurringService', () => {
     const result = await processDueExpenses(new Date('2026-03-01T12:00:00.000Z'))
 
     expect(result.createdCount).toBe(1)
+    expect(result.skippedCount).toBe(0)
     expect(prisma.expense.create).toHaveBeenCalledTimes(1)
     expect(prisma.recurringExpense.update).toHaveBeenCalledWith({
       where: { id: 'r-1' },
@@ -162,6 +179,7 @@ describe('RecurringService', () => {
     const result = await ensureDueExpensesForHousehold('hh-1', new Date('2026-03-10T00:00:00.000Z'))
 
     expect(result.createdCount).toBe(1)
+    expect(result.skippedCount).toBe(0)
     expect(prisma.recurringExpense.findMany).toHaveBeenCalledWith({
       where: {
         householdId: 'hh-1',
@@ -184,5 +202,33 @@ describe('RecurringService', () => {
     expect(advanceNextDueDate(new Date('2026-03-01T00:00:00.000Z'), 'yearly')).toEqual(
       new Date('2027-03-01T00:00:00.000Z')
     )
+  })
+
+  it('skips invalid recurring entries without crashing batch', async () => {
+    vi.mocked(prisma.recurringExpense.findMany).mockResolvedValue([
+      {
+        id: 'r-bad',
+        householdId: 'hh-1',
+        payerId: 'u1',
+        amount: 100,
+        description: 'Broken custom',
+        categoryId: 'cat-1',
+        splitMethod: 'custom',
+        splitConfig: null,
+        frequency: 'monthly',
+        nextDueDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: null,
+        active: true,
+      },
+    ] as any)
+    vi.mocked(memberService.getMembersWithEffectiveSalary).mockResolvedValue([
+      { userId: 'u1', salary: 1000 },
+      { userId: 'u2', salary: 1000 },
+    ] as any)
+
+    const result = await processDueExpenses(new Date('2026-03-02T00:00:00.000Z'))
+
+    expect(result.createdCount).toBe(0)
+    expect(result.skippedCount).toBe(1)
   })
 })

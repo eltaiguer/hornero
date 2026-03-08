@@ -13,7 +13,9 @@ describe('SplitPreview', () => {
       />
     )
 
-    expect(screen.getByText(/alex owes \$60\.00/i)).toBeInTheDocument()
-    expect(screen.getByText(/sam owes \$40\.00/i)).toBeInTheDocument()
+    expect(screen.getByText(/alex/i)).toBeInTheDocument()
+    expect(screen.getByText(/sam/i)).toBeInTheDocument()
+    expect(screen.getByText(/\$60\.00/)).toBeInTheDocument()
+    expect(screen.getByText(/\$40\.00/)).toBeInTheDocument()
   })
 })

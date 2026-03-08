@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import {
   createRecurringExpenseSchema,
+  isValidRecurringCustomSplitConfig,
   type CreateRecurringExpenseInput,
   type RecurringFrequency,
   updateRecurringExpenseSchema,
@@ -8,8 +9,9 @@ import {
 } from '@/lib/validations/recurring'
 import { calculateSplits } from './split.service'
 import { getMembersWithEffectiveSalary } from './member.service'
+import { notifyBudgetThresholds } from './push.service'
 
-type ProcessResult = { createdCount: number }
+type ProcessResult = { createdCount: number; skippedCount: number }
 type RecurringItems = Awaited<ReturnType<typeof prisma.recurringExpense.findMany>>
 
 export function advanceNextDueDate(current: Date, frequency: RecurringFrequency): Date {
@@ -69,9 +71,28 @@ export async function createRecurringExpense(
 
 export async function updateRecurringExpense(recurringId: string, input: UpdateRecurringExpenseInput) {
   const validated = updateRecurringExpenseSchema.parse(input)
+  const existing = await prisma.recurringExpense.findUnique({
+    where: { id: recurringId },
+    select: { splitMethod: true, splitConfig: true },
+  })
+
+  if (!existing) {
+    throw new Error('Recurring expense not found')
+  }
 
   const data: Record<string, unknown> = {
     ...validated,
+  }
+
+  const nextSplitMethod = validated.splitMethod ?? (existing.splitMethod as CreateRecurringExpenseInput['splitMethod'])
+  const nextSplitConfig = validated.splitConfig ?? existing.splitConfig ?? undefined
+  const splitFieldsChanged = validated.splitMethod !== undefined || validated.splitConfig !== undefined
+  if (splitFieldsChanged && nextSplitMethod === 'custom' && (!nextSplitConfig || !isValidRecurringCustomSplitConfig(nextSplitConfig))) {
+    throw new Error('Custom recurring splitConfig must be a valid percentage map that sums to 100')
+  }
+
+  if (nextSplitMethod !== 'custom' && validated.splitMethod) {
+    data.splitConfig = null
   }
 
   if (validated.startDate) {
@@ -116,55 +137,71 @@ export async function getRecurringExpenses(householdId: string) {
 
 async function materializeRecurringItems(recurring: RecurringItems): Promise<ProcessResult> {
   let createdCount = 0
+  let skippedCount = 0
 
   for (const item of recurring) {
-    const members = await getMembersWithEffectiveSalary(item.householdId, item.nextDueDate)
+    try {
+      const members = await getMembersWithEffectiveSalary(item.householdId, item.nextDueDate)
 
-    const splits = calculateSplits(
-      item.amount,
-      item.splitMethod as CreateRecurringExpenseInput['splitMethod'],
-      members,
-      item.splitConfig ?? undefined
-    )
+      const splits = calculateSplits(
+        item.amount,
+        item.splitMethod as CreateRecurringExpenseInput['splitMethod'],
+        members,
+        item.splitConfig ?? undefined
+      )
 
-    await prisma.$transaction(async (tx) => {
-      const expense = await tx.expense.create({
+      await prisma.$transaction(async (tx) => {
+        const expense = await tx.expense.create({
+          data: {
+            householdId: item.householdId,
+            payerId: item.payerId,
+            amount: item.amount,
+            description: item.description,
+            date: item.nextDueDate,
+            categoryId: item.categoryId,
+            splitMethod: item.splitMethod,
+            splitConfig: item.splitConfig,
+          },
+        })
+
+        await tx.expenseSplit.createMany({
+          data: splits.map((split) => ({
+            expenseId: expense.id,
+            userId: split.userId,
+            amountOwed: split.amountOwed,
+          })),
+        })
+      })
+
+      const nextDueDate = advanceNextDueDate(item.nextDueDate, item.frequency as RecurringFrequency)
+      const shouldDeactivate = Boolean(item.endDate && nextDueDate > item.endDate)
+
+      await prisma.recurringExpense.update({
+        where: { id: item.id },
         data: {
-          householdId: item.householdId,
-          payerId: item.payerId,
-          amount: item.amount,
-          description: item.description,
-          date: item.nextDueDate,
-          categoryId: item.categoryId,
-          splitMethod: item.splitMethod,
-          splitConfig: item.splitConfig,
+          nextDueDate,
+          active: shouldDeactivate ? false : item.active,
         },
       })
 
-      await tx.expenseSplit.createMany({
-        data: splits.map((split) => ({
-          expenseId: expense.id,
-          userId: split.userId,
-          amountOwed: split.amountOwed,
-        })),
-      })
-    })
+      try {
+        await notifyBudgetThresholds(
+          item.householdId,
+          item.nextDueDate.getUTCMonth() + 1,
+          item.nextDueDate.getUTCFullYear()
+        )
+      } catch {
+        // Budget notification failures must not block recurring materialization.
+      }
 
-    const nextDueDate = advanceNextDueDate(item.nextDueDate, item.frequency as RecurringFrequency)
-    const shouldDeactivate = Boolean(item.endDate && nextDueDate > item.endDate)
-
-    await prisma.recurringExpense.update({
-      where: { id: item.id },
-      data: {
-        nextDueDate,
-        active: shouldDeactivate ? false : item.active,
-      },
-    })
-
-    createdCount += 1
+      createdCount += 1
+    } catch (error) {
+      skippedCount += 1
+      console.error(`[recurring] failed to materialize ${item.id}`, error)
+    }
   }
 
-  return { createdCount }
+  return { createdCount, skippedCount }
 }
 
 export async function processDueExpenses(now = new Date()): Promise<ProcessResult> {

@@ -29,3 +29,10 @@ export async function uploadReceipt(expenseId: string, file: UploadableFile) {
     data: { receiptUrl: publicUrl },
   })
 }
+
+export async function clearReceipt(expenseId: string) {
+  return prisma.expense.update({
+    where: { id: expenseId },
+    data: { receiptUrl: null },
+  })
+}

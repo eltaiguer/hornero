@@ -11,6 +11,9 @@ import { prisma } from '@/lib/prisma'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
+    user: {
+      findMany: vi.fn(),
+    },
     category: {
       findMany: vi.fn(),
     },
@@ -48,15 +51,15 @@ describe('InsightsService', () => {
       { categoryId: 'cat-2', _sum: { amount: 100 } },
     ] as any)
     vi.mocked(prisma.category.findMany).mockResolvedValue([
-      { id: 'cat-1', name: 'Groceries' },
-      { id: 'cat-2', name: 'Transport' },
+      { id: 'cat-1', name: 'Groceries', color: '#22C55E', emoji: '🛒' },
+      { id: 'cat-2', name: 'Transport', color: '#3B82F6', emoji: '🚗' },
     ] as any)
 
     const result = await getSpendingByCategory('hh-1', 3, 2026)
 
     expect(result).toEqual([
-      { categoryId: 'cat-1', category: 'Groceries', amount: 300, percentage: 75 },
-      { categoryId: 'cat-2', category: 'Transport', amount: 100, percentage: 25 },
+      { categoryId: 'cat-1', category: 'Groceries', color: '#22C55E', emoji: '🛒', amount: 300, percentage: 75 },
+      { categoryId: 'cat-2', category: 'Transport', color: '#3B82F6', emoji: '🚗', amount: 100, percentage: 25 },
     ])
   })
 
@@ -76,12 +79,16 @@ describe('InsightsService', () => {
     vi.mocked(prisma.expense.findMany).mockResolvedValue([
       { splits: [{ userId: 'u1', amountOwed: 180 }, { userId: 'u2', amountOwed: 120 }] },
     ] as any)
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      { id: 'u1', name: 'Sam', email: 'sam@example.com' },
+      { id: 'u2', name: 'Alex', email: 'alex@example.com' },
+    ] as any)
 
     const breakdown = await getMemberBreakdown('hh-1', 3, 2026)
 
     expect(breakdown).toEqual([
-      { userId: 'u1', amount: 180 },
-      { userId: 'u2', amount: 120 },
+      { userId: 'u1', name: 'Sam', amount: 180 },
+      { userId: 'u2', name: 'Alex', amount: 120 },
     ])
   })
 
@@ -99,17 +106,19 @@ describe('InsightsService', () => {
 
   it('returns budget vs actual records', async () => {
     vi.mocked(prisma.budget.findMany).mockResolvedValue([
-      { categoryId: 'cat-1', amount: 500, category: { name: 'Groceries' } },
+      { categoryId: 'cat-1', amount: 500, category: { name: 'Groceries', color: '#22C55E', emoji: '🛒' } },
     ] as any)
     vi.mocked(prisma.expense.groupBy).mockResolvedValue([
       { categoryId: 'cat-1', _sum: { amount: 320 } },
     ] as any)
-    vi.mocked(prisma.category.findMany).mockResolvedValue([{ id: 'cat-1', name: 'Groceries' }] as any)
+    vi.mocked(prisma.category.findMany).mockResolvedValue([
+      { id: 'cat-1', name: 'Groceries', color: '#22C55E', emoji: '🛒' },
+    ] as any)
 
     const data = await getBudgetVsActual('hh-1', 3, 2026)
 
     expect(data).toEqual([
-      { categoryId: 'cat-1', category: 'Groceries', budget: 500, actual: 320 },
+      { categoryId: 'cat-1', category: 'Groceries', color: '#22C55E', emoji: '🛒', budget: 500, actual: 320 },
     ])
   })
 })

@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ExpenseList } from '../expense-list'
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+  }),
+}))
 
 describe('ExpenseList', () => {
   it('renders expense rows', () => {
@@ -21,6 +27,6 @@ describe('ExpenseList', () => {
 
     expect(screen.getByText(/groceries/i)).toBeInTheDocument()
     expect(screen.getByText(/\$120\.00/)).toBeInTheDocument()
-    expect(screen.getByText(/paid by alex/i)).toBeInTheDocument()
+    expect(screen.getByText(/alex paid/i)).toBeInTheDocument()
   })
 })

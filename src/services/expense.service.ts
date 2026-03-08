@@ -10,6 +10,7 @@ import {
 import { calculateSplits } from './split.service'
 import { getMembersWithEffectiveSalary } from './member.service'
 import { ensureDueExpensesForHousehold } from './recurring.service'
+import { notifyBudgetThresholds } from './push.service'
 
 function getDateToInclusive(date: Date) {
   const inclusive = new Date(date)
@@ -46,7 +47,7 @@ export async function createExpense(
     validated.splitConfig
   )
 
-  return prisma.$transaction(async (tx) => {
+  const expense = await prisma.$transaction(async (tx) => {
     const expense = await tx.expense.create({
       data: {
         householdId,
@@ -71,6 +72,16 @@ export async function createExpense(
 
     return expense
   })
+
+  const month = validated.date.getUTCMonth() + 1
+  const year = validated.date.getUTCFullYear()
+  try {
+    await notifyBudgetThresholds(householdId, month, year)
+  } catch {
+    // Notification dispatch failures should not fail expense creation.
+  }
+
+  return expense
 }
 
 export async function getExpenses(householdId: string, filters: Partial<ExpenseFilterInput>) {
@@ -101,28 +112,42 @@ export async function getExpenses(householdId: string, filters: Partial<ExpenseF
     }
   }
 
-  const skip = (validated.page - 1) * validated.pageSize
+  const baseQuery = {
+    where,
+    include: {
+      payer: { select: { id: true, name: true, email: true } },
+      category: true,
+      splits: true,
+    },
+    orderBy: [{ date: 'desc' as const }, { id: 'desc' as const }],
+  }
 
   const [items, total] = await Promise.all([
-    prisma.expense.findMany({
-      where,
-      include: {
-        payer: { select: { id: true, name: true, email: true } },
-        category: true,
-        splits: true,
-      },
-      orderBy: { date: 'desc' },
-      skip,
-      take: validated.pageSize,
-    }),
+    validated.cursor
+      ? prisma.expense.findMany({
+        ...baseQuery,
+        cursor: { id: validated.cursor },
+        skip: 1,
+        take: validated.pageSize + 1,
+      })
+      : prisma.expense.findMany({
+        ...baseQuery,
+        skip: (validated.page - 1) * validated.pageSize,
+        take: validated.pageSize,
+      }),
     prisma.expense.count({ where }),
   ])
 
+  const hasMore = validated.cursor ? items.length > validated.pageSize : false
+  const normalizedItems = hasMore ? items.slice(0, validated.pageSize) : items
+  const nextCursor = hasMore ? normalizedItems[normalizedItems.length - 1]?.id : null
+
   return {
-    items,
+    items: normalizedItems,
     total,
     page: validated.page,
     pageSize: validated.pageSize,
+    nextCursor,
   }
 }
 

@@ -47,7 +47,7 @@ describe('BudgetService', () => {
 
   it('computes budget progress with actual spend totals', async () => {
     vi.mocked(prisma.budget.findMany).mockResolvedValue([
-      { id: 'b-1', amount: 500, categoryId: 'cat-1', category: { name: 'Groceries' } },
+      { id: 'b-1', amount: 500, categoryId: 'cat-1', category: { name: 'Groceries', emoji: '🛒' } },
     ] as any)
     vi.mocked(prisma.expense.groupBy).mockResolvedValue([
       { categoryId: 'cat-1', _sum: { amount: 320 } },
@@ -57,8 +57,10 @@ describe('BudgetService', () => {
 
     expect(result).toEqual([
       {
+        budgetId: 'b-1',
         categoryId: 'cat-1',
         categoryName: 'Groceries',
+        categoryEmoji: '🛒',
         budgetAmount: 500,
         actualSpent: 320,
         percentage: 64,
@@ -68,7 +70,7 @@ describe('BudgetService', () => {
 
   it('returns alerts for 80% and 100% thresholds', async () => {
     vi.mocked(prisma.budget.findMany).mockResolvedValue([
-      { id: 'b-1', amount: 500, categoryId: 'cat-1', category: { name: 'Groceries' } },
+      { id: 'b-1', amount: 500, categoryId: 'cat-1', category: { name: 'Groceries', emoji: '🛒' } },
     ] as any)
     vi.mocked(prisma.expense.groupBy).mockResolvedValue([
       { categoryId: 'cat-1', _sum: { amount: 450 } },

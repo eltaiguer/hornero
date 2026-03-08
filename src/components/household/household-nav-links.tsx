@@ -21,7 +21,7 @@ export function HouseholdNavLinks({ householdId }: Props) {
       {ITEMS.map((item) => (
         <Link
           key={item.label}
-          href={`${item.href}?id=${householdId}`}
+          href={`${item.href}?householdId=${householdId}`}
           className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
         >
           {item.label}

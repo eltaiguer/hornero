@@ -5,19 +5,21 @@ import { ExpenseFilters } from '../expense-filters'
 
 describe('ExpenseFilters', () => {
   it('emits filter changes', async () => {
-    const onChange = vi.fn()
+    const onApply = vi.fn()
     const user = userEvent.setup()
 
     render(
       <ExpenseFilters
         categories={[{ id: 'cat-1', name: 'Groceries' }]}
         members={[{ id: 'u1', name: 'Alex' }]}
-        onChange={onChange}
+        onApply={onApply}
       />
     )
 
+    await user.click(screen.getByRole('button', { name: /filter/i }))
     await user.selectOptions(screen.getByLabelText(/category/i), 'cat-1')
+    await user.click(screen.getByRole('button', { name: /apply filters/i }))
 
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'cat-1' }))
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'cat-1' }))
   })
 })

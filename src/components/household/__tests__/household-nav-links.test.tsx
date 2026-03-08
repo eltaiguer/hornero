@@ -8,19 +8,19 @@ describe('HouseholdNavLinks', () => {
 
     expect(screen.getByRole('link', { name: 'Add expense' })).toHaveAttribute(
       'href',
-      '/household/expenses/new?id=hh-1'
+      '/household/expenses/new?householdId=hh-1'
     )
     expect(screen.getByRole('link', { name: 'Expenses' })).toHaveAttribute(
       'href',
-      '/household/expenses?id=hh-1'
+      '/household/expenses?householdId=hh-1'
     )
     expect(screen.getByRole('link', { name: 'Recurring' })).toHaveAttribute(
       'href',
-      '/household/recurring?id=hh-1'
+      '/household/recurring?householdId=hh-1'
     )
     expect(screen.getByRole('link', { name: 'Insights' })).toHaveAttribute(
       'href',
-      '/household/insights?id=hh-1'
+      '/household/insights?householdId=hh-1'
     )
   })
 })

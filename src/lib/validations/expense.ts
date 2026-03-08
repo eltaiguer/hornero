@@ -75,6 +75,7 @@ export const expenseFilterSchema = z
     payerId: z.string().optional(),
     minAmount: z.number().nonnegative().optional(),
     maxAmount: z.number().nonnegative().optional(),
+    cursor: z.string().optional(),
     page: z.number().int().positive().default(1),
     pageSize: z.number().int().positive().max(100).default(20),
   })

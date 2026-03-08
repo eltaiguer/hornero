@@ -59,14 +59,16 @@ export async function getSpendingByCategory(householdId: string, month: number, 
   const categories = categoryIds.length
     ? await prisma.category.findMany({
         where: { id: { in: categoryIds } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, color: true, emoji: true },
       })
     : []
-  const categoryNameMap = new Map(categories.map((category) => [category.id, category.name]))
+  const categoryMap = new Map(categories.map((category) => [category.id, category]))
 
   const all = grouped.map((row) => ({
     categoryId: row.categoryId,
-    category: categoryNameMap.get(row.categoryId) ?? 'Unknown',
+    category: categoryMap.get(row.categoryId)?.name ?? 'Unknown',
+    color: categoryMap.get(row.categoryId)?.color ?? '#6b7280',
+    emoji: categoryMap.get(row.categoryId)?.emoji ?? '📁',
     amount: round(row._sum.amount ?? 0),
   }))
 
@@ -123,7 +125,19 @@ export async function getMemberBreakdown(householdId: string, month: number, yea
     }
   }
 
-  return Array.from(totals.entries()).map(([userId, amount]) => ({ userId, amount: round(amount) }))
+  const users = prisma.user
+    ? await prisma.user.findMany({
+        where: { id: { in: Array.from(totals.keys()) } },
+        select: { id: true, name: true, email: true },
+      })
+    : []
+  const userMap = new Map(users.map((user) => [user.id, user]))
+
+  return Array.from(totals.entries()).map(([userId, amount]) => ({
+    userId,
+    name: userMap.get(userId)?.name ?? userMap.get(userId)?.email ?? 'Unknown',
+    amount: round(amount),
+  }))
 }
 
 export async function getTopExpenses(
@@ -137,7 +151,7 @@ export async function getTopExpenses(
   return prisma.expense.findMany({
     where: { householdId, date: { gte: start, lte: end } },
     include: {
-      category: { select: { name: true } },
+      category: { select: { name: true, emoji: true } },
       payer: { select: { id: true, name: true, email: true } },
     },
     orderBy: { amount: 'desc' },
@@ -148,7 +162,7 @@ export async function getTopExpenses(
 export async function getBudgetVsActual(householdId: string, month: number, year: number) {
   const budgets = await prisma.budget.findMany({
     where: { householdId, month, year },
-    include: { category: { select: { name: true } } },
+    include: { category: { select: { name: true, color: true, emoji: true } } },
   })
 
   const byCategory = await getSpendingByCategory(householdId, month, year)
@@ -157,6 +171,8 @@ export async function getBudgetVsActual(householdId: string, month: number, year
   return budgets.map((budget) => ({
     categoryId: budget.categoryId,
     category: budget.category.name,
+    color: budget.category.color,
+    emoji: budget.category.emoji,
     budget: round(budget.amount),
     actual: round(actualMap.get(budget.categoryId) ?? 0),
   }))

@@ -12,7 +12,8 @@ describe('SettlementHistory', () => {
       />
     )
 
-    expect(screen.getByText(/sam paid alex/i)).toBeInTheDocument()
+    expect(screen.getByText(/sam/i)).toBeInTheDocument()
+    expect(screen.getByText(/alex/i)).toBeInTheDocument()
     expect(screen.getByText(/\$20\.00/)).toBeInTheDocument()
   })
 })

@@ -1,38 +1,81 @@
 import { PrismaClient } from '@prisma/client'
 import { execSync } from 'child_process'
-import { existsSync, mkdirSync, unlinkSync } from 'fs'
-import path from 'path'
 
-let testPrisma: PrismaClient
+let testPrisma: PrismaClient | undefined
+let migrationsApplied = false
 
-const TEST_DB_URL = 'file:./prisma/test.db'
-const TEST_DB_PATH = path.join(process.cwd(), 'prisma', 'test.db')
-const TEST_CACHE_PATH = path.join(process.cwd(), '.cache')
+const APP_TABLES = [
+  'notification_dispatches',
+  'push_subscriptions',
+  'recurring_expenses',
+  'budgets',
+  'settlements',
+  'expense_splits',
+  'expenses',
+  'categories',
+  'household_invites',
+  'member_salary_history',
+  'household_members',
+  'households',
+  'verification_tokens',
+  'sessions',
+  'accounts',
+  'users',
+]
+
+function getTestDatabaseUrl() {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url) {
+    throw new Error(
+      'Integration tests require TEST_DATABASE_URL pointing to a dedicated Postgres test database.'
+    )
+  }
+  return url
+}
+
+function getTestDirectUrl() {
+  return process.env.TEST_DIRECT_URL ?? process.env.DIRECT_URL ?? getTestDatabaseUrl()
+}
+
+function getPrismaEnv() {
+  const dbUrl = getTestDatabaseUrl()
+  const directUrl = getTestDirectUrl()
+  return {
+    ...process.env,
+    DATABASE_URL: dbUrl,
+    DIRECT_URL: directUrl,
+  }
+}
+
+function applyMigrationsOnce() {
+  if (migrationsApplied) return
+
+  execSync('npx prisma migrate deploy', {
+    env: getPrismaEnv(),
+    stdio: 'pipe',
+  })
+  migrationsApplied = true
+}
+
+async function truncateAllTables(prisma: PrismaClient) {
+  await prisma.$executeRawUnsafe(
+    `TRUNCATE TABLE ${APP_TABLES.map((table) => `"${table}"`).join(', ')} RESTART IDENTITY CASCADE`
+  )
+}
 
 export function getTestPrisma(): PrismaClient {
   if (!testPrisma) {
-    // Prisma v7 reads datasource URL from env, not constructor args
-    process.env.DATABASE_URL = TEST_DB_URL
+    process.env.DATABASE_URL = getTestDatabaseUrl()
+    process.env.DIRECT_URL = getTestDirectUrl()
     testPrisma = new PrismaClient()
   }
   return testPrisma
 }
 
 export async function resetTestDatabase(): Promise<void> {
-  if (existsSync(TEST_DB_PATH)) {
-    unlinkSync(TEST_DB_PATH)
-  }
-  mkdirSync(TEST_CACHE_PATH, { recursive: true })
-
-  execSync('npx prisma db push --skip-generate', {
-    env: {
-      ...process.env,
-      DATABASE_URL: TEST_DB_URL,
-      XDG_CACHE_HOME: TEST_CACHE_PATH,
-      HOME: process.cwd(),
-    },
-    stdio: 'pipe',
-  })
+  applyMigrationsOnce()
+  const prisma = getTestPrisma()
+  await truncateAllTables(prisma)
 }
 
 export async function disconnectTestDatabase(): Promise<void> {

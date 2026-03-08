@@ -8,13 +8,13 @@ import {
 
 export const DEFAULT_CATEGORIES = [
   { name: 'Groceries', color: '#22C55E', emoji: '🛒' },
-  { name: 'Dining', color: '#F59E0B', emoji: '🍽️' },
-  { name: 'Transport', color: '#3B82F6', emoji: '🚗' },
   { name: 'Housing', color: '#8B5CF6', emoji: '🏠' },
-  { name: 'Utilities', color: '#06B6D4', emoji: '💡' },
-  { name: 'Health', color: '#EF4444', emoji: '🩺' },
-  { name: 'Education', color: '#10B981', emoji: '📚' },
+  { name: 'Utilities', color: '#06B6D4', emoji: '⚡' },
+  { name: 'Transport', color: '#3B82F6', emoji: '🚗' },
+  { name: 'Dining Out', color: '#F59E0B', emoji: '🍽️' },
   { name: 'Entertainment', color: '#EC4899', emoji: '🎬' },
+  { name: 'Health', color: '#EF4444', emoji: '🏥' },
+  { name: 'Clothing', color: '#A855F7', emoji: '👕' },
   { name: 'Other', color: '#6B7280', emoji: '📁' },
 ] as const
 

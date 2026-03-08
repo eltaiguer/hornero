@@ -3,9 +3,10 @@ import { auth } from '@/lib/auth'
 import { getHouseholdById, updateHouseholdSettings } from '@/services/household.service'
 import { isHouseholdOwner } from '@/services/member.service'
 import type { UpdateHouseholdSettingsInput } from '@/lib/validations/household'
+import { PushNotificationsToggle } from '@/components/settings/push-notifications-toggle'
 
 interface Props {
-  searchParams: Promise<{ id?: string }>
+  searchParams: Promise<{ id?: string; householdId?: string }>
 }
 
 export default async function SettingsPage({ searchParams }: Props) {
@@ -14,17 +15,18 @@ export default async function SettingsPage({ searchParams }: Props) {
     redirect('/signin')
   }
 
-  const { id } = await searchParams
-  if (!id) {
+  const params = await searchParams
+  const householdId = params.householdId ?? params.id
+  if (!householdId) {
     redirect('/dashboard')
   }
 
-  const household = await getHouseholdById(id)
+  const household = await getHouseholdById(householdId)
   if (!household) {
     notFound()
   }
 
-  const isOwner = await isHouseholdOwner(id, session.user.id)
+  const isOwner = await isHouseholdOwner(householdId, session.user.id)
   if (!isOwner) {
     redirect('/dashboard')
   }
@@ -36,12 +38,12 @@ export default async function SettingsPage({ searchParams }: Props) {
     const input: UpdateHouseholdSettingsInput = {
       name: formData.get('name') as string,
     }
-    await updateHouseholdSettings(id!, input)
-    redirect(`/household/settings?id=${id}`)
+    await updateHouseholdSettings(householdId, input)
+    redirect(`/household/settings?householdId=${householdId}`)
   }
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
+    <main className="mx-auto max-w-2xl p-6 pb-20 md:pb-6">
       <h1 className="text-2xl font-bold">Household Settings</h1>
 
       <form action={handleUpdate} className="mt-6 space-y-4">
@@ -75,6 +77,10 @@ export default async function SettingsPage({ searchParams }: Props) {
           Save changes
         </button>
       </form>
+
+      <div className="mt-6">
+        <PushNotificationsToggle householdId={householdId} />
+      </div>
     </main>
   )
 }

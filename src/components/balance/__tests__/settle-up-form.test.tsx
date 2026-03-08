@@ -10,12 +10,14 @@ describe('SettleUpForm', () => {
 
     render(
       <SettleUpForm
-        members={[{ id: 'u2', name: 'Alex' }]}
+        receiverId="u2"
+        receiverName="Alex"
+        defaultAmount={25}
         onSubmit={onSubmit}
       />
     )
 
-    await user.selectOptions(screen.getByLabelText(/receiver/i), 'u2')
+    await user.clear(screen.getByLabelText(/amount/i))
     await user.type(screen.getByLabelText(/amount/i), '25')
     await user.click(screen.getByRole('button', { name: /record payment/i }))
 

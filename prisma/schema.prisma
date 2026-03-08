@@ -27,6 +27,8 @@ model User {
   settlementsPaid     Settlement[] @relation("SettlementPayer")
   settlementsReceived Settlement[] @relation("SettlementReceiver")
   recurringExpenses   RecurringExpense[] @relation("RecurringPayer")
+  pushSubscriptions   PushSubscription[]
+  notificationDispatches NotificationDispatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -92,6 +94,8 @@ model Household {
   settlements Settlement[]
   budgets    Budget[]
   recurringExpenses RecurringExpense[]
+  pushSubscriptions PushSubscription[]
+  notificationDispatches NotificationDispatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -260,4 +264,35 @@ model RecurringExpense {
   @@index([nextDueDate])
   @@index([active])
   @@map("recurring_expenses")
+}
+
+model PushSubscription {
+  id          String    @id @default(cuid())
+  userId      String
+  householdId String
+  endpoint    String    @unique
+  p256dh      String
+  auth        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, householdId, endpoint])
+  @@index([householdId, userId])
+  @@map("push_subscriptions")
+}
+
+model NotificationDispatch {
+  id          String    @id @default(cuid())
+  householdId String
+  userId      String
+  eventKey    String
+  createdAt   DateTime  @default(now())
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId, eventKey])
+  @@index([householdId, eventKey])
+  @@map("notification_dispatches")
 }

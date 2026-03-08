@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { uploadReceipt } from '../receipt.service'
+import { clearReceipt, uploadReceipt } from '../receipt.service'
 import { prisma } from '@/lib/prisma'
 
 vi.mock('@/lib/prisma', () => ({
@@ -28,5 +28,17 @@ describe('ReceiptService', () => {
         data: expect.objectContaining({ receiptUrl: expect.stringContaining('/uploads/') }),
       })
     )
+  })
+
+  it('clears receipt url', async () => {
+    vi.mocked(prisma.expense.update).mockResolvedValue({ id: 'exp-1', receiptUrl: null } as any)
+
+    const result = await clearReceipt('exp-1')
+
+    expect(result.receiptUrl).toBeNull()
+    expect(prisma.expense.update).toHaveBeenCalledWith({
+      where: { id: 'exp-1' },
+      data: { receiptUrl: null },
+    })
   })
 })

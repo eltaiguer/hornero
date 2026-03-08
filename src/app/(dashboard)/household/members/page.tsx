@@ -8,7 +8,7 @@ import { InviteMemberForm } from '@/components/household/invite-member-form'
 import { HouseholdNavLinks } from '@/components/household/household-nav-links'
 
 interface Props {
-  searchParams: Promise<{ id?: string }>
+  searchParams: Promise<{ id?: string; householdId?: string }>
 }
 
 export default async function MembersPage({ searchParams }: Props) {
@@ -17,12 +17,13 @@ export default async function MembersPage({ searchParams }: Props) {
     redirect('/signin')
   }
 
-  const { id } = await searchParams
-  if (!id) {
+  const params = await searchParams
+  const householdId = params.householdId ?? params.id
+  if (!householdId) {
     redirect('/dashboard')
   }
 
-  const household = await getHouseholdById(id)
+  const household = await getHouseholdById(householdId)
   if (!household) {
     notFound()
   }
@@ -32,20 +33,20 @@ export default async function MembersPage({ searchParams }: Props) {
     redirect('/dashboard')
   }
 
-  const isOwner = await isHouseholdOwner(id, session.user.id)
+  const isOwner = await isHouseholdOwner(householdId, session.user.id)
 
   async function handleSalaryUpdate(salary: number | null, effectiveFrom: string) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
-    await updateMemberSalary(id!, s.user.id, salary, effectiveFrom)
+    await updateMemberSalary(householdId, s.user.id, salary, effectiveFrom)
   }
 
   async function handleInvite(email: string) {
     'use server'
     const s = await auth()
     if (!s?.user?.id) throw new Error('Unauthorized')
-    await createInvite(id!, email, s.user.id)
+    await createInvite(householdId, email, s.user.id)
   }
 
   return (
@@ -93,7 +94,7 @@ export default async function MembersPage({ searchParams }: Props) {
           Continue by adding expenses, recurring items, and budgets for this household.
         </p>
         <div className="mt-3">
-          <HouseholdNavLinks householdId={id} />
+          <HouseholdNavLinks householdId={householdId} />
         </div>
       </section>
     </main>

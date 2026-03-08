@@ -37,6 +37,9 @@ vi.mock('../member.service', () => ({
 vi.mock('../recurring.service', () => ({
   ensureDueExpensesForHousehold: vi.fn(),
 }))
+vi.mock('../push.service', () => ({
+  notifyBudgetThresholds: vi.fn(),
+}))
 
 describe('ExpenseService', () => {
   beforeEach(() => {

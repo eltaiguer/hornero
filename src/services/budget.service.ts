@@ -2,8 +2,10 @@ import { prisma } from '@/lib/prisma'
 import { createBudgetSchema, type CreateBudgetInput } from '@/lib/validations/budget'
 
 export interface BudgetProgressItem {
+  budgetId: string
   categoryId: string
   categoryName: string
+  categoryEmoji: string
   budgetAmount: number
   actualSpent: number
   percentage: number
@@ -91,8 +93,10 @@ export async function getBudgetProgress(
     const percentage = budget.amount > 0 ? roundToCents((actualSpent / budget.amount) * 100) : 0
 
     return {
+      budgetId: budget.id,
       categoryId: budget.categoryId,
       categoryName: budget.category.name,
+      categoryEmoji: budget.category.emoji,
       budgetAmount: budget.amount,
       actualSpent,
       percentage,
@@ -108,6 +112,7 @@ export async function checkBudgetAlerts(householdId: string, month: number, year
     .map((item) => ({
       ...item,
       level: item.percentage >= 100 ? ('danger' as const) : ('warning' as const),
+      overBudgetAmount: item.actualSpent - item.budgetAmount,
     }))
 }
 

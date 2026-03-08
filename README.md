@@ -29,6 +29,8 @@ Then make sure:
 - `DATABASE_URL` points to your Supabase pooler URL (`:6543`)
 - `DIRECT_URL` points to your Supabase direct URL (`:5432`)
 - `AUTH_SECRET` is set (required for NextAuth in production and recommended in dev)
+- `TEST_DATABASE_URL` points to a dedicated Postgres test database for integration tests
+- `TEST_DIRECT_URL` can be set for test migrations (falls back to `DIRECT_URL`)
 
 You can generate a secret with:
 
@@ -59,6 +61,9 @@ Set these env vars in Vercel (Production + Preview):
 - `DIRECT_URL` (Supabase direct URL)
 - `AUTH_SECRET`
 - `CRON_SECRET` (only if you use `/api/cron/recurring`)
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (Web Push public key)
+- `VAPID_PRIVATE_KEY` (Web Push private key)
+- `VAPID_SUBJECT` (mailto URL for Web Push)
 
 Use this build command:
 

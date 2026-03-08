@@ -1,8 +1,11 @@
+import { formatCurrency } from '@/lib/formatting'
+
 interface BudgetAlertProps {
   alerts: Array<{
     categoryName: string
     percentage: number
     level: 'warning' | 'danger'
+    overBudgetAmount?: number
   }>
 }
 
@@ -11,15 +14,26 @@ export function BudgetAlert({ alerts }: BudgetAlertProps) {
     return null
   }
 
+  const shown = alerts.slice(0, 2)
+  const remainder = alerts.length - shown.length
+
   return (
-    <ul className="space-y-2">
-      {alerts.map((alert, index) => (
-        <li key={`${alert.categoryName}-${index}`} className="rounded-md border p-3 text-sm">
-          <span>{alert.categoryName}</span>
-          <span className="ml-2">{alert.percentage}%</span>
-          <span className="ml-2 font-medium">{alert.level === 'danger' ? 'Over budget' : 'Near limit'}</span>
-        </li>
+    <div className="space-y-2">
+      {shown.map((alert, index) => (
+        <div
+          key={`${alert.categoryName}-${index}`}
+          className={
+            alert.level === 'danger'
+              ? 'rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800'
+              : 'rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800'
+          }
+        >
+          {alert.level === 'danger'
+            ? `🔴 ${alert.categoryName} is over budget by ${formatCurrency(Math.max(alert.overBudgetAmount ?? 0, 0))}`
+            : `⚠ ${alert.categoryName} is at ${alert.percentage.toFixed(0)}% of budget`}
+        </div>
       ))}
-    </ul>
+      {remainder > 0 ? <p className="text-sm text-blue-600">and {remainder} more...</p> : null}
+    </div>
   )
 }
