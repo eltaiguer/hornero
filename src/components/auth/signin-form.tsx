@@ -22,7 +22,7 @@ export function SignInForm() {
     setLoading(true)
     const result = await signIn('credentials', {
       email,
-      callbackUrl: '/dashboard',
+      callbackUrl: '/household',
       redirect: false,
     })
 
@@ -32,7 +32,7 @@ export function SignInForm() {
       return
     }
 
-    router.push('/dashboard')
+    router.push('/household')
     router.refresh()
     setLoading(false)
   }
