@@ -138,10 +138,16 @@ export async function getRecurringExpenses(householdId: string) {
 async function materializeRecurringItems(recurring: RecurringItems): Promise<ProcessResult> {
   let createdCount = 0
   let skippedCount = 0
+  const membersByKey = new Map<string, Awaited<ReturnType<typeof getMembersWithEffectiveSalary>>>()
 
   for (const item of recurring) {
     try {
-      const members = await getMembersWithEffectiveSalary(item.householdId, item.nextDueDate)
+      const memberKey = `${item.householdId}:${item.nextDueDate.toISOString()}`
+      let members = membersByKey.get(memberKey)
+      if (!members) {
+        members = await getMembersWithEffectiveSalary(item.householdId, item.nextDueDate)
+        membersByKey.set(memberKey, members)
+      }
 
       const splits = calculateSplits(
         item.amount,

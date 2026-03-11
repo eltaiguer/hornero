@@ -12,10 +12,27 @@ import { getMembersWithEffectiveSalary } from './member.service'
 import { ensureDueExpensesForHousehold } from './recurring.service'
 import { notifyBudgetThresholds } from './push.service'
 
+const INLINE_RECURRING_SYNC_COOLDOWN_MS = 60_000
+const inlineRecurringSyncAt = new Map<string, number>()
+
 function getDateToInclusive(date: Date) {
   const inclusive = new Date(date)
   inclusive.setHours(23, 59, 59, 999)
   return inclusive
+}
+
+function shouldInlineSyncRecurring(householdId: string, now: number) {
+  if (process.env.NODE_ENV === 'test') {
+    return true
+  }
+
+  const previous = inlineRecurringSyncAt.get(householdId) ?? 0
+  if (now - previous < INLINE_RECURRING_SYNC_COOLDOWN_MS) {
+    return false
+  }
+
+  inlineRecurringSyncAt.set(householdId, now)
+  return true
 }
 
 export async function createExpense(
@@ -85,7 +102,15 @@ export async function createExpense(
 }
 
 export async function getExpenses(householdId: string, filters: Partial<ExpenseFilterInput>) {
-  await ensureDueExpensesForHousehold(householdId, new Date())
+  if (shouldInlineSyncRecurring(householdId, Date.now())) {
+    if (process.env.NODE_ENV === 'test') {
+      await ensureDueExpensesForHousehold(householdId, new Date())
+    } else {
+      void ensureDueExpensesForHousehold(householdId, new Date()).catch(() => {
+        // Recurring materialization should not block expense reads.
+      })
+    }
+  }
 
   const validated = expenseFilterSchema.parse(filters)
   const where: Record<string, unknown> = { householdId }
@@ -114,16 +139,20 @@ export async function getExpenses(householdId: string, filters: Partial<ExpenseF
 
   const baseQuery = {
     where,
-    include: {
+    select: {
+      id: true,
+      description: true,
+      amount: true,
+      date: true,
       payer: { select: { id: true, name: true, email: true } },
-      category: true,
-      splits: true,
+      category: {
+        select: { id: true, name: true, emoji: true, color: true },
+      },
     },
     orderBy: [{ date: 'desc' as const }, { id: 'desc' as const }],
   }
 
-  const [items, total] = await Promise.all([
-    validated.cursor
+  const listPromise = validated.cursor
       ? prisma.expense.findMany({
         ...baseQuery,
         cursor: { id: validated.cursor },
@@ -134,9 +163,12 @@ export async function getExpenses(householdId: string, filters: Partial<ExpenseF
         ...baseQuery,
         skip: (validated.page - 1) * validated.pageSize,
         take: validated.pageSize,
-      }),
-    prisma.expense.count({ where }),
-  ])
+      })
+  const totalPromise = validated.cursor
+    ? Promise.resolve<number | null>(null)
+    : prisma.expense.count({ where })
+
+  const [items, total] = await Promise.all([listPromise, totalPromise])
 
   const hasMore = validated.cursor ? items.length > validated.pageSize : false
   const normalizedItems = hasMore ? items.slice(0, validated.pageSize) : items
@@ -144,7 +176,7 @@ export async function getExpenses(householdId: string, filters: Partial<ExpenseF
 
   return {
     items: normalizedItems,
-    total,
+    total: total ?? normalizedItems.length,
     page: validated.page,
     pageSize: validated.pageSize,
     nextCursor,

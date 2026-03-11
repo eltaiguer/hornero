@@ -1,7 +1,8 @@
+import { Suspense } from 'react'
 import { MobileBottomNav } from '@/components/navigation/mobile-bottom-nav'
 import { QuickAddFab } from '@/components/navigation/quick-add-fab'
 
-export const dynamic = 'force-dynamic'
+export const preferredRegion = 'gru1'
 
 export default function DashboardLayout({
   children,
@@ -11,8 +12,12 @@ export default function DashboardLayout({
   return (
     <>
       <div className="pb-20 md:pb-6">{children}</div>
-      <QuickAddFab />
-      <MobileBottomNav />
+      <Suspense fallback={null}>
+        <QuickAddFab />
+      </Suspense>
+      <Suspense fallback={null}>
+        <MobileBottomNav />
+      </Suspense>
     </>
   )
 }

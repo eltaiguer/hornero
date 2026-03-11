@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useRef, useState } from 'react'
 
 interface Props {
@@ -87,7 +88,14 @@ export function ReceiptUploadForm({ expenseId, existingUrl }: Props) {
             onClick={() => setLightboxOpen(true)}
             className="block w-full"
           >
-            <img src={url} alt="Receipt" className="max-h-64 object-cover w-full" />
+            <Image
+              src={url}
+              alt="Receipt"
+              width={1200}
+              height={1600}
+              className="max-h-64 object-cover w-full"
+              unoptimized
+            />
           </button>
           <button
             type="button"
@@ -122,7 +130,14 @@ export function ReceiptUploadForm({ expenseId, existingUrl }: Props) {
           >
             Close
           </button>
-          <img src={url} alt="Receipt full size" className="max-h-[90vh] max-w-[90vw] rounded-md" />
+          <Image
+            src={url}
+            alt="Receipt full size"
+            width={1600}
+            height={2200}
+            className="max-h-[90vh] max-w-[90vw] rounded-md w-auto h-auto"
+            unoptimized
+          />
         </div>
       ) : null}
     </div>

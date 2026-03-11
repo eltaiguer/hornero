@@ -116,6 +116,7 @@ model HouseholdMember {
   joinedAt DateTime @default(now())
 
   @@unique([householdId, userId])
+  @@index([userId])
   @@map("household_members")
 }
 
@@ -188,6 +189,7 @@ model Expense {
   splits      ExpenseSplit[]
 
   @@index([householdId])
+  @@index([householdId, date, id])
   @@index([date])
   @@index([categoryId])
   @@index([payerId])
@@ -261,6 +263,7 @@ model RecurringExpense {
   category    Category  @relation(fields: [categoryId], references: [id])
 
   @@index([householdId])
+  @@index([householdId, active, nextDueDate])
   @@index([nextDueDate])
   @@index([active])
   @@map("recurring_expenses")

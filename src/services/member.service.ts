@@ -159,6 +159,13 @@ export async function getSalaryHistory(householdId: string, userId: string) {
   })
 }
 
+export async function getSalaryHistoryForHousehold(householdId: string) {
+  return prisma.memberSalaryHistory.findMany({
+    where: { householdId },
+    orderBy: [{ userId: 'asc' }, { effectiveFrom: 'desc' }],
+  })
+}
+
 export async function getHouseholdMembers(householdId: string) {
   return prisma.householdMember.findMany({
     where: { householdId },

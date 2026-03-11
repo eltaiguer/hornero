@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { getHouseholdById, updateHouseholdSettings } from '@/services/household.service'
-import { isHouseholdOwner, getHouseholdMembers, getSalaryHistory } from '@/services/member.service'
+import { isHouseholdOwner, getHouseholdMembers, getSalaryHistoryForHousehold } from '@/services/member.service'
 import { SUPPORTED_CURRENCIES, SPLIT_METHODS } from '@/lib/validations/household'
 import type { UpdateHouseholdSettingsInput } from '@/lib/validations/household'
 import { PushNotificationsToggle } from '@/components/settings/push-notifications-toggle'
@@ -43,25 +43,28 @@ export default async function SettingsPage({ searchParams }: Props) {
     notFound()
   }
 
-  const [isOwner, members] = await Promise.all([
+  const [isOwner, members, salaryHistory] = await Promise.all([
     isHouseholdOwner(householdIdValue, session.user.id),
     getHouseholdMembers(householdIdValue),
+    getSalaryHistoryForHousehold(householdIdValue),
   ])
   if (!isOwner) {
     redirect('/dashboard')
   }
 
-  const membersWithHistory = await Promise.all(
-    members.map(async (member) => {
-      const history = await getSalaryHistory(householdIdValue, member.userId)
-      return {
-        userId: member.userId,
-        name: member.user.name ?? member.user.email ?? 'Unknown',
-        currentSalary: member.salary,
-        history,
-      }
-    })
-  )
+  const historyByUserId = new Map<string, typeof salaryHistory>()
+  for (const item of salaryHistory) {
+    const rows = historyByUserId.get(item.userId) ?? []
+    rows.push(item)
+    historyByUserId.set(item.userId, rows)
+  }
+
+  const membersWithHistory = members.map((member) => ({
+    userId: member.userId,
+    name: member.user.name ?? member.user.email ?? 'Unknown',
+    currentSalary: member.salary,
+    history: historyByUserId.get(member.userId) ?? [],
+  }))
 
   async function handleUpdate(formData: FormData) {
     'use server'

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CreateExpenseInput } from '@/lib/validations/expense'
 import { formatCurrency, formatDateForInput } from '@/lib/formatting'
@@ -296,7 +297,14 @@ export function ExpenseForm({
             />
             {pendingReceiptPreview ? (
               <div className="relative rounded-md overflow-hidden border">
-                <img src={pendingReceiptPreview} alt="Receipt preview" className="max-h-48 object-cover w-full" />
+                <Image
+                  src={pendingReceiptPreview}
+                  alt="Receipt preview"
+                  width={1200}
+                  height={1600}
+                  className="max-h-48 object-cover w-full"
+                  unoptimized
+                />
                 <button
                   type="button"
                   onClick={() => {

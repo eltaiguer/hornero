@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
 import { getUserHouseholds } from '@/services/household.service'
 import { getExpenses } from '@/services/expense.service'
@@ -102,23 +103,25 @@ export default async function ExpensesPage({
         </Link>
       </div>
 
-      <ExpenseFiltersPanel
-        householdId={householdId}
-        categories={categories.map((category) => ({
-          id: category.id,
-          name: category.name,
-          emoji: category.emoji,
-        }))}
-        members={members.map((member) => ({ id: member.userId, name: member.user.name ?? member.user.email ?? 'Unknown' }))}
-        initialValue={{
-          dateFrom: params.dateFrom,
-          dateTo: params.dateTo,
-          categoryId: params.categoryId,
-          payerId: params.payerId,
-          minAmount: params.minAmount,
-          maxAmount: params.maxAmount,
-        }}
-      />
+      <Suspense fallback={<div className="rounded-md border p-4 text-sm text-gray-500">Loading filters...</div>}>
+        <ExpenseFiltersPanel
+          householdId={householdId}
+          categories={categories.map((category) => ({
+            id: category.id,
+            name: category.name,
+            emoji: category.emoji,
+          }))}
+          members={members.map((member) => ({ id: member.userId, name: member.user.name ?? member.user.email ?? 'Unknown' }))}
+          initialValue={{
+            dateFrom: params.dateFrom,
+            dateTo: params.dateTo,
+            categoryId: params.categoryId,
+            payerId: params.payerId,
+            minAmount: params.minAmount,
+            maxAmount: params.maxAmount,
+          }}
+        />
+      </Suspense>
 
       <PullToRefresh>
         <ExpenseList
