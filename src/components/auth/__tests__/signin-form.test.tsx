@@ -39,10 +39,10 @@ describe('SignInForm', () => {
 
     expect(signIn).toHaveBeenCalledWith('credentials', {
       email: 'user@example.com',
-      callbackUrl: '/dashboard',
+      callbackUrl: '/household',
       redirect: false,
     })
-    expect(mockPush).toHaveBeenCalledWith('/dashboard')
+    expect(mockPush).toHaveBeenCalledWith('/household')
   })
 
   it('should show validation error for invalid email', async () => {
